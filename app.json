@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "P",
+    "slug": "P",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.easwarconnect.P",
+      "permissions": []
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b1a536d2-c703-4c5b-b912-55dd5f7fb734"
+      }
+    },
+    "owner": "easwarconnect",
+    "plugins": [
+      "expo-video",
+      "react-native-video"
+    ]
+  }
+}
