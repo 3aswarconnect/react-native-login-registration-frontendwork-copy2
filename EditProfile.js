@@ -5,9 +5,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import axios from 'axios';
 
 const EditProfile = ({ route, navigation }) => {
-  const { userId, username, initialName, initialBio, initialProfilePic, initialSocialLinks } = route.params;
+  const { userId, username, initialName, initialBio, initialProfilePic, initialSocialLinks, initialEmail } = route.params;
   const [name, setName] = useState(initialName || '');
   const [bio, setBio] = useState(initialBio || '');
+  const [email, setEmail] = useState(initialEmail || '');
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [socialLinks, setSocialLinks] = useState(initialSocialLinks || []);
@@ -19,7 +20,7 @@ const EditProfile = ({ route, navigation }) => {
   };
 
   const uploadToServer = async () => {
-    if (!file && !name && !bio && socialLinks.length === 0) {
+    if (!file && !name && !bio && !email && socialLinks.length === 0) {
       return Alert.alert('Error', 'Please update at least one field');
     }
     
@@ -29,6 +30,7 @@ const EditProfile = ({ route, navigation }) => {
     formData.append('username', username);
     formData.append('name', name);
     formData.append('bio', bio);
+    formData.append('email', email);
     formData.append('socialLinks', JSON.stringify(socialLinks));
     
     if (file) {
@@ -125,6 +127,15 @@ const EditProfile = ({ route, navigation }) => {
               onChangeText={setName} 
               style={styles.input} 
               placeholderTextColor="#697565" 
+            />
+            <TextInput 
+              placeholder="Enter Email" 
+              value={email} 
+              onChangeText={setEmail} 
+              style={styles.input} 
+              placeholderTextColor="#697565"
+              keyboardType="email-address"
+              autoCapitalize="none"
             />
             <TextInput 
               placeholder="Enter Bio" 

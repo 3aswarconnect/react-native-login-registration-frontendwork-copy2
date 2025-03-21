@@ -14,6 +14,8 @@ const ProfileScreen = () => {
   const [profilePic, setProfilePic] = useState(null);
   const [socialLinks, setSocialLinks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [registeredAt, setRegisteredAt] = useState(null);
+  const [accountAgeDays, setAccountAgeDays] = useState(null);
  
   // Use useFocusEffect to refresh data when screen comes into focus
   useFocusEffect(
@@ -43,6 +45,24 @@ const ProfileScreen = () => {
         // If socialLinks exist in the response, set them
         if (response.data.socialLinks) {
           setSocialLinks(response.data.socialLinks);
+        }
+
+        // Get registration timestamp and account age
+        if (response.data.registeredAt) {
+          setRegisteredAt(response.data.registeredAt);
+          
+          // Use the accountAgeDays from the backend if available
+          if (response.data.accountAgeDays !== undefined) {
+            setAccountAgeDays(response.data.accountAgeDays);
+          } else {
+            // Calculate only as fallback
+            const registrationDate = new Date(response.data.registeredAt);
+            const currentDate = new Date();
+            const differenceInTime = currentDate.getTime() - registrationDate.getTime();
+            const differenceInDays = Math.floor(differenceInTime / (1000 * 3600 * 24));
+            
+            setAccountAgeDays(differenceInDays);
+          }
         }
       }
       
@@ -101,6 +121,16 @@ const ProfileScreen = () => {
               </View>
             )}
           </View>
+          
+          {/* Registration info */}
+          {accountAgeDays !== null && (
+            <View style={styles.registrationInfo}>
+              <Ionicons name="calendar" size={20} color="#9DB18B" style={styles.calendarIcon} />
+              <Text style={styles.registrationText}>
+                Our relation is started {accountAgeDays} {accountAgeDays === 1 ? 'day' : 'days'} back
+              </Text>
+            </View>
+          )}
           
           {/* Name below profile picture */}
           {name ? (
@@ -182,7 +212,7 @@ const styles = StyleSheet.create({
   },
   profileImageContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 15,
   },
   profileImage: {
     width: 150,
@@ -195,6 +225,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A2B26',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  registrationInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#181C14',
+    borderRadius: 25,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#9DB18B',
+  },
+  calendarIcon: {
+    marginRight: 8,
+  },
+  registrationText: {
+    fontSize: 14,
+    color: '#E0E0E0',
+    fontStyle: 'italic',
   },
   name: {
     fontSize: 22,
