@@ -87,6 +87,12 @@ const ProfileScreen = () => {
     });
   };
 
+  const navigateToFeed = () => {
+    navigation.navigate('Feed',{
+      userId: userId,
+    });
+  };
+
   const getIconName = (platform) => {
     const platform_lower = platform.toLowerCase();
     if (platform_lower.includes('youtube')) return 'logo-youtube';
@@ -103,9 +109,14 @@ const ProfileScreen = () => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.container}>
+          {/* Feed Button - Added at top left */}
+          <TouchableOpacity style={styles.feedButton} onPress={navigateToFeed} >
+            <Ionicons name="image" size={24} color="#000000" />
+          </TouchableOpacity>
+          
           {/* Settings Button */}
           <TouchableOpacity style={styles.settingsButton} onPress={navigateToSettings}>
-            <Ionicons name="settings" size={24} color="#E0E0E0" />
+            <Ionicons name="settings" size={24} color="#000000" />
           </TouchableOpacity>
           
           {/* Username at top */}
@@ -117,7 +128,7 @@ const ProfileScreen = () => {
               <Image source={{ uri: profilePic }} style={styles.profileImage} />
             ) : (
               <View style={[styles.profileImage, styles.placeholderImage]}>
-                <Ionicons name="person" size={50} color="#697565" />
+                <Ionicons name="person" size={50} color="#000000" />
               </View>
             )}
           </View>
@@ -125,7 +136,7 @@ const ProfileScreen = () => {
           {/* Registration info */}
           {accountAgeDays !== null && (
             <View style={styles.registrationInfo}>
-              <Ionicons name="calendar" size={20} color="#9DB18B" style={styles.calendarIcon} />
+              <Ionicons name="calendar" size={20} color="#000000" style={styles.calendarIcon} />
               <Text style={styles.registrationText}>
                 Our relation is started {accountAgeDays} {accountAgeDays === 1 ? 'day' : 'days'} back
               </Text>
@@ -158,7 +169,7 @@ const ProfileScreen = () => {
                     Alert.alert("Opening Link", `Opening ${link.url}`);
                   }}
                 >
-                  <Ionicons name={getIconName(link.platform)} size={22} color="#E0E0E0" />
+                  <Ionicons name={getIconName(link.platform)} size={22} color="#000000" />
                   <Text style={styles.socialLinkText}>{link.name}</Text>
                 </TouchableOpacity>
               ))}
@@ -168,7 +179,7 @@ const ProfileScreen = () => {
               style={styles.addSocialButton}
               onPress={navigateToSettings}
             >
-              <Ionicons name="add-circle-outline" size={20} color="#E0E0E0" />
+              <Ionicons name="add-circle-outline" size={20} color="#000000" />
               <Text style={styles.addSocialText}>Add social links</Text>
             </TouchableOpacity>
           )}
@@ -181,18 +192,34 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#3C3D37',
+    backgroundColor: 'white',
   },
   scrollView: {
-    backgroundColor: '#3C3D37',
+    backgroundColor: 'white',
   },
   container: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 30,
     paddingBottom: 30,
-    backgroundColor: '#3C3D37',
+    backgroundColor: 'white',
     alignItems: 'center',
+  },
+  feedButton: {
+    position: 'absolute',
+    top: 10,
+    left: 20,
+    padding: 10,
+    zIndex: 10,
+    backgroundColor: 'white',
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 1, height: 5 },
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   settingsButton: {
     position: 'absolute',
@@ -200,13 +227,20 @@ const styles = StyleSheet.create({
     right: 20,
     padding: 10,
     zIndex: 10,
-    backgroundColor: '#181C14',
-    borderRadius: 20,
+    backgroundColor: 'white',
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 1, height: 5 },
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   username: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#E0E0E0',
+    color: '#000000',
     marginTop: 120,
     marginBottom: 20,
   },
@@ -219,48 +253,58 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 75,
     borderWidth: 3,
-    borderColor: '#697565',
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 1, height: 5 },
+    elevation: 5,
   },
   placeholderImage: {
-    backgroundColor: '#2A2B26',
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
   },
   registrationInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#181C14',
-    borderRadius: 25,
+    backgroundColor: 'white',
+    borderRadius: 30,
     paddingVertical: 8,
     paddingHorizontal: 15,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#9DB18B',
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 1, height: 5 },
+    elevation: 5,
   },
   calendarIcon: {
     marginRight: 8,
   },
   registrationText: {
     fontSize: 14,
-    color: '#E0E0E0',
+    color: '#000000',
     fontStyle: 'italic',
   },
   name: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#E0E0E0',
+    color: '#000000',
     marginBottom: 10,
   },
   bio: {
     fontSize: 16,
-    color: '#AAA',
+    color: '#333333',
     textAlign: 'center',
     paddingHorizontal: 30,
     marginBottom: 20,
   },
   noProfileText: {
     fontSize: 16,
-    color: '#888',
+    color: '#888888',
     fontStyle: 'italic',
     textAlign: 'center',
     paddingHorizontal: 30,
@@ -277,33 +321,43 @@ const styles = StyleSheet.create({
   socialLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#181C14',
-    borderRadius: 20,
+    backgroundColor: 'white',
+    borderRadius: 30,
     paddingVertical: 8,
     paddingHorizontal: 15,
     margin: 5,
     borderWidth: 1,
-    borderColor: '#697565',
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 1, height: 5 },
+    elevation: 5,
   },
   socialLinkText: {
     fontSize: 14,
-    color: '#E0E0E0',
+    color: '#000000',
     marginLeft: 5,
   },
   addSocialButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#181C14',
-    borderRadius: 20,
+    backgroundColor: 'white',
+    borderRadius: 30,
     paddingVertical: 8,
     paddingHorizontal: 15,
     marginTop: 10,
     borderWidth: 1,
-    borderColor: '#697565',
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 1, height: 5 },
+    elevation: 5,
   },
   addSocialText: {
     fontSize: 14,
-    color: '#E0E0E0',
+    color: '#000000',
     marginLeft: 5,
   },
 });

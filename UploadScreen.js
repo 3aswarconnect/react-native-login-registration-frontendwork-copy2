@@ -103,7 +103,7 @@ const UploadScreen = () => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         <View style={styles.container}>
-          <StatusBar barStyle="light-content" backgroundColor="#181C14" />
+          <StatusBar barStyle="dark-content" backgroundColor="white" />
           <Text style={styles.screenTitle}>Upload Content</Text>
           
           <View style={styles.formSection}>
@@ -113,13 +113,13 @@ const UploadScreen = () => {
               onPress={() => setShowCategoryModal(true)}
             >
               <Text style={styles.dropdownText}>{category}</Text>
-              <Ionicons name="chevron-down" size={20} color="#697565" />
+              <Ionicons name="chevron-down" size={20} color="#000000" />
             </TouchableOpacity>
 
             <Text style={styles.label}>Description</Text>
             <TextInput
               placeholder="Enter a description for your content..."
-              placeholderTextColor="#666"
+              placeholderTextColor="#777"
               value={description}
               onChangeText={setDescription}
               style={styles.input}
@@ -137,8 +137,8 @@ const UploadScreen = () => {
               <Switch 
                 value={isPublic} 
                 onValueChange={setIsPublic}
-                trackColor={{ false: '#3C3D37', true: '#697565' }}
-                thumbColor={isPublic ? '#181C14' : '#E0E0E0'} 
+                trackColor={{ false: '#E0E0E0', true: '#000000' }}
+                thumbColor={isPublic ? 'white' : '#f0f0f0'} 
               />
             </View>
           </View>
@@ -150,13 +150,13 @@ const UploadScreen = () => {
               style={[styles.fileButton, file && styles.fileButtonSelected]} 
               onPress={pickFile}
             >
-              <Ionicons name="cloud-upload-outline" size={24} color="#697565" />
+              <Ionicons name="cloud-upload-outline" size={24} color="#000000" />
               <Text style={styles.fileButtonText}>Select Media File</Text>
               <Text style={styles.fileLimit}>(Max 100MB)</Text>
             </TouchableOpacity>
             {file && (
               <View style={styles.selectedFileContainer}>
-                <Ionicons name={file.mimeType.includes('video') ? 'videocam' : 'image'} size={18} color="#697565" />
+                <Ionicons name={file.mimeType.includes('video') ? 'videocam' : 'image'} size={18} color="#000000" />
                 <Text style={styles.fileText} numberOfLines={1} ellipsizeMode="middle">{file.name}</Text>
               </View>
             )}
@@ -165,13 +165,13 @@ const UploadScreen = () => {
               style={[styles.fileButton, styles.docButton, docfile && styles.fileButtonSelected]} 
               onPress={pickDocFile}
             >
-              <Ionicons name="document-text-outline" size={24} color="#697565" />
+              <Ionicons name="document-text-outline" size={24} color="#000000" />
               <Text style={styles.fileButtonText}>Select Document</Text>
               <Text style={styles.fileLimit}>(Max 10MB, Optional)</Text>
             </TouchableOpacity>
             {docfile && (
               <View style={styles.selectedFileContainer}>
-                <Ionicons name="document-text" size={18} color="#697565" />
+                <Ionicons name="document-text" size={18} color="#000000" />
                 <Text style={styles.fileText} numberOfLines={1} ellipsizeMode="middle">{docfile.name}</Text>
               </View>
             )}
@@ -184,12 +184,12 @@ const UploadScreen = () => {
           >
             {uploading ? (
               <View style={styles.uploadingContainer}>
-                <ActivityIndicator size="small" color="#E0E0E0" />
+                <ActivityIndicator size="small" color="white" />
                 <Text style={styles.uploadButtonText}>Uploading...</Text>
               </View>
             ) : (
               <View style={styles.uploadingContainer}>
-                <Ionicons name="arrow-up-circle" size={20} color="#E0E0E0" />
+                <Ionicons name="arrow-up-circle" size={20} color="white" />
                 <Text style={styles.uploadButtonText}>Upload Content</Text>
               </View>
             )}
@@ -216,7 +216,7 @@ const UploadScreen = () => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Category</Text>
               <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
-                <Ionicons name="close" size={24} color="#697565" />
+                <Ionicons name="close" size={24} color="#000000" />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -240,7 +240,7 @@ const UploadScreen = () => {
                     {item}
                   </Text>
                   {category === item && (
-                    <Ionicons name="checkmark" size={20} color="#697565" />
+                    <Ionicons name="checkmark" size={20} color="#000000" />
                   )}
                 </TouchableOpacity>
               )}
@@ -256,11 +256,11 @@ const UploadScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#3C3D37',
+    backgroundColor: 'white',
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#3C3D37',
+    backgroundColor: 'white',
   },
   scrollViewContent: {
     flexGrow: 1,
@@ -268,64 +268,64 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#3C3D37',
+    backgroundColor: 'white',
   },
   screenTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#E0E0E0',
+    color: '#000000',
     marginBottom: 25,
     marginTop: 10,
   },
   formSection: {
     marginBottom: 20,
-    backgroundColor: '#2A2B26',
+    backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
     borderWidth: 1,
-    borderColor: '#181C14',
+    borderColor: '#E0E0E0',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#E0E0E0',
+    color: '#000000',
     marginBottom: 15,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#E0E0E0',
+    color: '#000000',
   },
   customDropdown: {
     height: 50,
     borderWidth: 1,
     borderRadius: 8,
-    borderColor: '#181C14',
+    borderColor: '#E0E0E0',
     marginBottom: 20,
-    backgroundColor: '#242520',
+    backgroundColor: 'white',
     paddingHorizontal: 15,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   dropdownText: {
-    color: '#E0E0E0',
+    color: '#000000',
     fontSize: 16,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#181C14',
+    borderColor: '#E0E0E0',
     borderRadius: 8,
     padding: 12,
     marginBottom: 20,
-    backgroundColor: '#242520',
-    color: '#E0E0E0',
+    backgroundColor: 'white',
+    color: '#000000',
     textAlignVertical: 'top',
     minHeight: 80,
   },
@@ -337,85 +337,85 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#E0E0E0',
+    color: '#000000',
   },
   switchSubLabel: {
     fontSize: 12,
-    color: '#AAA',
+    color: '#777',
     marginTop: 2,
   },
   fileSection: {
     marginBottom: 20,
-    backgroundColor: '#2A2B26',
+    backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
     borderWidth: 1,
-    borderColor: '#181C14',
+    borderColor: '#E0E0E0',
   },
   fileButton: {
     padding: 15,
-    backgroundColor: '#242520',
+    backgroundColor: 'white',
     borderRadius: 8,
     alignItems: 'center',
     marginBottom: 15,
     flexDirection: 'row',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#181C14',
+    borderColor: '#E0E0E0',
     borderStyle: 'dashed',
   },
   fileButtonSelected: {
-    borderColor: '#697565',
-    backgroundColor: '#353632',
+    borderColor: '#000000',
+    backgroundColor: '#f9f9f9',
     borderStyle: 'solid',
   },
   docButton: {
-    backgroundColor: '#242520',
+    backgroundColor: 'white',
   },
   fileButtonText: {
-    color: '#E0E0E0',
+    color: '#000000',
     fontWeight: 'bold',
     marginLeft: 8,
   },
   fileLimit: {
-    color: '#AAA',
+    color: '#777',
     fontSize: 12,
     marginLeft: 6,
   },
   selectedFileContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#353632',
+    backgroundColor: '#f9f9f9',
     padding: 10,
     borderRadius: 6,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#697565',
+    borderColor: '#000000',
   },
   fileText: {
     fontSize: 14,
-    color: '#E0E0E0',
+    color: '#000000',
     marginLeft: 8,
     flex: 1,
   },
   uploadButton: {
     padding: 16,
-    backgroundColor: '#181C14',
-    borderRadius: 10,
+    backgroundColor: '#000000',
+    borderRadius: 30,
     alignItems: 'center',
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
   },
   uploadButtonDisabled: {
-    backgroundColor: '#414139',
+    backgroundColor: '#999999',
     shadowOpacity: 0.1,
   },
   uploadingContainer: {
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   uploadButtonText: {
-    color: '#E0E0E0',
+    color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
     marginLeft: 8,
@@ -436,12 +436,12 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    backgroundColor: '#3C3D37',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     paddingBottom: 20,
     maxHeight: '70%',
   },
@@ -451,12 +451,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#181C14',
+    borderBottomColor: '#E0E0E0',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#E0E0E0',
+    color: '#000000',
   },
   categoryList: {
     padding: 10,
@@ -468,22 +468,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#2A2B26',
+    backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: '#181C14',
+    borderColor: '#E0E0E0',
   },
   selectedCategoryItem: {
-    backgroundColor: '#353632',
+    backgroundColor: '#f9f9f9',
     borderWidth: 1,
-    borderColor: '#697565',
+    borderColor: '#000000',
   },
   categoryText: {
     fontSize: 16,
-    color: '#E0E0E0',
+    color: '#000000',
   },
   selectedCategoryText: {
     fontWeight: 'bold',
-    color: '#E0E0E0',
+    color: '#000000',
   },
 });
 

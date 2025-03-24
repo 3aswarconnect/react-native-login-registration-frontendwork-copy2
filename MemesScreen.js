@@ -1,34 +1,54 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, Dimensions, Linking, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, Dimensions, Linking, Alert, Animated } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { height, width } = Dimensions.get('window');
-const categories = ['All', 'Entertainment', 'Education', 'Technology', 'Travel', 'Food', 'Fitness', 'Music', 'Comedy', 'Motivation', 'Fashion', 'News', 'Happy', 'Sad', 'Angry'];
+const categories = ['All','Entertainment','Kids Corner','Food/cooking','News','Gaming','Motivation/Self Growth','Travel/Nature','Tech/Education', 'Health/Fitness','Personal Thoughts'];
 
 const MemeItem = React.memo(({ item, index }) => {
   const [username, setUsername] = useState('');
   const [profilePic, setProfilePic] = useState(null);
+  
+  // Animation value for pulsing effect
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   
   // Get userId directly from the item prop
   const userId = item.userId;
   
   // Check if this meme has a document file
   const hasDocFile = !!item.docFileUrl;
-
-  // Log for debugging
-  console.log(`Meme ${index} userId:`, userId);
-  console.log(`Meme ${index} has doc file:`, hasDocFile);
-  if (hasDocFile) {
-    console.log(`Doc file URL:`, item.docFileUrl);
-  }
   
   useEffect(() => {
     if (userId) {
       fetchProfileData();
     }
-  }, [userId]);
+    
+    // Start pulsing animation for doc icon
+    if (hasDocFile) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.2,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          })
+        ])
+      ).start();
+    }
+    
+    return () => {
+      // Clean up animations when component unmounts
+      pulseAnim.stopAnimation();
+    };
+  }, [userId, hasDocFile]);
   
   const fetchProfileData = async () => {
     try {
@@ -41,8 +61,6 @@ const MemeItem = React.memo(({ item, index }) => {
         if (response.data.profilePic) setProfilePic(response.data.profilePic);
         if (response.data.username) setUsername(response.data.username);
       }
-      
-      console.log(`Profile data for user ${userId}:`, response.data);
     } catch (error) {
       console.log(`Profile data not found for user ${userId}:`, error);
       // Set fallback username if needed
@@ -50,7 +68,7 @@ const MemeItem = React.memo(({ item, index }) => {
     }
   };
   
-  const openDocumentFile = () => {
+  const openDocumentFile = useCallback(() => {
     if (item.docFileUrl) {
       Linking.openURL(item.docFileUrl)
         .catch(err => {
@@ -62,11 +80,17 @@ const MemeItem = React.memo(({ item, index }) => {
           console.error("Error opening document URL:", err);
         });
     }
-  };
+  }, [item.docFileUrl]);
 
   return (
     <View style={styles.memeContainer}>
       <Image source={{ uri: item.fileUrl }} style={styles.meme} resizeMode="contain" />
+      
+      {/* Gradient overlay at the bottom for better text readability */}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.7)']}
+        style={styles.gradientOverlay}
+      />
       
       {/* Description container with username */}
       <View style={styles.descriptionContainer}>
@@ -77,22 +101,28 @@ const MemeItem = React.memo(({ item, index }) => {
       {/* Right side icons container */}
       <View style={styles.rightIconsContainer}>
         {/* Profile picture */}
-        {profilePic ? (
-          <Image 
-            source={{ uri: profilePic }} 
-            style={styles.profilePicIcon} 
-          />
-        ) : (
-          <View style={styles.defaultProfileIcon}>
-            <Text style={styles.defaultProfileIconText}>
-              {username ? username.charAt(0).toUpperCase() : '?'}
-            </Text>
-          </View>
-        )}
+        <TouchableOpacity>
+          {profilePic ? (
+            <Image 
+              source={{ uri: profilePic }} 
+              style={styles.profilePicIcon} 
+            />
+          ) : (
+            <View style={styles.defaultProfileIcon}>
+              <Text style={styles.defaultProfileIconText}>
+                {username ? username.charAt(0).toUpperCase() : '?'}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
         
         {/* Document file icon - only shown if docFileUrl exists */}
         {hasDocFile && (
-          <TouchableOpacity style={styles.docIconContainer} onPress={openDocumentFile}>
+          <TouchableOpacity 
+            style={styles.docIconContainer} 
+            onPress={openDocumentFile}
+            activeOpacity={0.7}
+          >
             <View style={styles.docIconInner}>
               <FontAwesome 
                 name="file-pdf-o" 
@@ -101,7 +131,14 @@ const MemeItem = React.memo(({ item, index }) => {
                 style={styles.docIcon} 
               />
             </View>
-            <View style={styles.docIconPulse}></View>
+            <Animated.View 
+              style={[
+                styles.docIconPulse,
+                {
+                  transform: [{ scale: pulseAnim }]
+                }
+              ]}
+            />
           </TouchableOpacity>
         )}
       </View>
@@ -143,12 +180,37 @@ const MemesScreen = () => {
   );
 
   const handleCategorySelect = useCallback((category) => {
+    if (category === selectedCategory) return;
+    
     setSelectedCategory(category);
     // Scroll back to top when changing category
     if (flatListRef.current) {
       flatListRef.current.scrollToOffset({ offset: 0, animated: true });
     }
-  }, []);
+  }, [selectedCategory]);
+
+  const renderCategoryButton = useCallback(({ item }) => (
+    <TouchableOpacity
+      style={[
+        styles.categoryButton, 
+        selectedCategory === item ? styles.selectedCategoryButton : {}
+      ]}
+      onPress={() => handleCategorySelect(item)}
+      activeOpacity={0.7}
+    >
+      <Text 
+        style={[
+          styles.categoryText,
+          selectedCategory === item ? styles.selectedCategoryText : {}
+        ]}
+      >
+        {item}
+      </Text>
+    </TouchableOpacity>
+  ), [selectedCategory, handleCategorySelect]);
+
+  const keyExtractor = useCallback((_, index) => `meme-${index}`, []);
+  const categoryKeyExtractor = useCallback((item) => `category-${item}`, []);
 
   return (
     <View style={styles.container}>
@@ -157,22 +219,16 @@ const MemesScreen = () => {
           horizontal
           showsHorizontalScrollIndicator={false}
           data={categories}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.categoryButton, selectedCategory === item && styles.selectedCategory]}
-              onPress={() => handleCategorySelect(item)}
-            >
-              <Text style={styles.categoryText}>{item}</Text>
-            </TouchableOpacity>
-          )}
+          keyExtractor={categoryKeyExtractor}
+          renderItem={renderCategoryButton}
+          contentContainerStyle={styles.categoryListContent}
         />
       </View>
 
       <FlatList
         ref={flatListRef}
         data={memes}
-        keyExtractor={(item, index) => index.toString()}
+        keyExtractor={keyExtractor}
         renderItem={({ item, index }) => <MemeItem item={item} index={index} />}
         pagingEnabled
         showsVerticalScrollIndicator={false}
@@ -196,23 +252,37 @@ const styles = StyleSheet.create({
   },
   filterContainer: { 
     position: 'absolute', 
-    top: 50, 
+    top: 20, 
     zIndex: 10, 
     width: '100%', 
-    paddingHorizontal: 10 
+    paddingHorizontal: 10
+  },
+  categoryListContent: {
+    paddingVertical: 9,
   },
   categoryButton: { 
-    padding: 10, 
-    borderRadius: 20, 
-    marginRight: 10, 
-    backgroundColor: 'rgba(68, 68, 68, 0.7)' 
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    backgroundColor: 'rgba(40, 40, 40, 0.8)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    elevation: 2,
   },
-  selectedCategory: { 
-    backgroundColor: '#007bff' 
+  selectedCategoryButton: {
+    backgroundColor: 'white',
+    borderColor: 'white',
+    elevation: 4,
   },
   categoryText: { 
-    color: '#fff', 
-    fontWeight: 'bold' 
+    color: '#d3d3d3',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  selectedCategoryText: {
+    color: '#000',
+    fontWeight: '600',
   },
   memeContainer: { 
     height: height,
@@ -223,37 +293,38 @@ const styles = StyleSheet.create({
   },
   meme: { 
     width: '100%', 
-    height: '80%' 
+    height: '100%' 
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '30%',
   },
   descriptionContainer: {
     position: 'absolute',
     bottom: 80,
     left: 10,
-    right: 10,
-    padding: 5,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 10,
+    right: 70, // Make space for the right icons
+    padding: 12,
   },
   description: { 
-    color: '#fff', 
+    color: '#ffffff', 
     fontSize: 16,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
     marginTop: 5,
+    lineHeight: 22,
   },
   userUsername: {
-    color: '#ccc',
-    fontSize: 14,
-    marginBottom: 3,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: 'bold',
+    marginBottom: 5,
   },
   rightIconsContainer: {
     position: 'absolute',
     right: 10,
-    bottom: 120,
+    bottom: 200,
     alignItems: 'center',
   },
   profilePicIcon: {
@@ -268,7 +339,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#007bff',
+    backgroundColor: 'rgba(16, 16, 17, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -292,12 +363,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(220, 53, 69, 0.9)',
+    backgroundColor: 'rgba(16, 16, 17, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'white',
-    elevation: 5,
+    elevation: 9,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -313,8 +384,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: 'rgba(220, 53, 69, 0.3)',
-    opacity: 0.5,
+    backgroundColor: 'rgba(221, 228, 235, 0.3)',
   },
 });
 
