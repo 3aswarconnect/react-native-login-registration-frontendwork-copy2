@@ -1,35 +1,128 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Dimensions, Image, Linking, Alert, Animated } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Dimensions, Image, Linking, Alert, Animated,ActivityIndicator } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useQueryClient } from 'react-query';
-
+import * as VideoThumbnails from "expo-video-thumbnails";
 const { height, width } = Dimensions.get('window');
 
 const categories = ['All','Entertainment','Kids Corner','Food/cooking','News','Gaming','Motivation/Self Growth','Travel/Nature','Tech/Education', 'Health/Fitness','Personal Thoughts'];
 
 // Export this function to be available for prefetching in SplashScreen
 export const fetchReelsData = async (category = 'All') => {
-  const response = await axios.get(`http://192.168.159.183:4000/reels?category=${category}`);
-  return response.data;
+  try {
+    const response = await axios.get(`http://192.168.234.183:4000/reels?category=${category}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching reels:', error);
+    return [];
+  }
 };
 
+const ThumbnailItem = React.memo(({ item, onPress, index }) => {
+  const [username, setUsername] = useState('');
+  const [profilePic, setProfilePic] = useState(null);
+  const [thumbnailUri, setThumbnailUri] = useState(null);
+  const [loadingThumbnail, setLoadingThumbnail] = useState(true);
+  const [imageLoadError, setImageLoadError] = useState(false);
+
+  useEffect(() => {
+    if (item.userId) fetchProfileData(item.userId);
+
+    if (item.thumbnailUrl) {
+      // Use pre-generated thumbnail if available
+      setThumbnailUri(item.thumbnailUrl);
+      setLoadingThumbnail(false);
+    } else {
+      // Generate thumbnail from video
+      generateThumbnail(item.fileUrl);
+    }
+  }, [item]);
+
+  const fetchProfileData = async (userId) => {
+    try {
+      const response = await axios.get(`http://192.168.234.183:4000/profileget`, {
+        params: { userId },
+      });
+
+      if (response.data) {
+        setProfilePic(response.data.profilePic || null);
+        setUsername(response.data.username || `user_${userId?.substring(0, 5)}`);
+      }
+    } catch (error) {
+      console.error("Profile fetch error:", error);
+      setUsername(`user_${userId?.substring(0, 5) || "unknown"}`);
+    }
+  };
+
+  const generateThumbnail = async (videoUri) => {
+    try {
+      const { uri } = await VideoThumbnails.getThumbnailAsync(videoUri, {
+        time: 0, // First frame of the video
+      });
+      setThumbnailUri(uri);
+    } catch (error) {
+      console.error("Thumbnail generation error:", error);
+      setThumbnailUri(null);
+    } finally {
+      setLoadingThumbnail(false);
+    }
+  };
+
+  return (
+    <TouchableOpacity 
+      style={styles.thumbnailContainer} 
+      onPress={() => onPress(index)}
+      activeOpacity={0.8}
+    >
+      <View style={styles.thumbnailImageContainer}>
+        {loadingThumbnail ? (
+          <ActivityIndicator size="large" color="blue" />
+        ) : thumbnailUri && !imageLoadError ? (
+          <Image
+            source={{ uri: thumbnailUri }}
+            style={styles.thumbnailImage}
+            onError={() => setImageLoadError(true)}
+          />
+        ) : (
+          <View style={[styles.thumbnailImage, styles.placeholderImage]}>
+            <Text style={styles.placeholderText}>No Preview</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.thumbnailDetailsContainer}>
+        <View style={styles.thumbnailProfileContainer}>
+          {profilePic ? (
+            <Image source={{ uri: profilePic }} style={styles.thumbnailProfilePic} />
+          ) : (
+            <View style={styles.thumbnailDefaultProfileIcon}>
+              <Text style={styles.thumbnailDefaultProfileText}>
+                {username ? username.charAt(0).toUpperCase() : "?"}
+              </Text>
+            </View>
+          )}
+          <Text style={styles.thumbnailUsername}>@{username || "anonymous"}</Text>
+        </View>
+
+      
+      </View>
+    </TouchableOpacity>
+  );
+});
 const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation }) => {
   const playerRef = useRef(null);
   const [username, setUsername] = useState('');
   const [profilePic, setProfilePic] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
   
-  // Animation value for pulsing effect
   const pulseAnim = useRef(new Animated.Value(1)).current;
   
-  // Get userId directly from the item prop
   const userId = item.userId;
   
-  // Check if this video has a document file
   const hasDocFile = !!item.docFileUrl;
   
   useEffect(() => {
@@ -37,7 +130,6 @@ const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation
       fetchProfileData();
     }
     
-    // Start pulsing animation for doc icon
     if (hasDocFile) {
       Animated.loop(
         Animated.sequence([
@@ -56,24 +148,21 @@ const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation
     }
     
     return () => {
-      // Clean up animations when component unmounts
       pulseAnim.stopAnimation();
     };
   }, [userId, hasDocFile]);
   
   const fetchProfileData = async () => {
     try {
-      const response = await axios.get(`http://192.168.159.183:4000/profileget`, {
+      const response = await axios.get(`http://192.168.234.183:4000/profileget`, {
         params: { userId }
       });
       
-      // Only set data if it exists in the response
       if (response.data) {
         if (response.data.profilePic) setProfilePic(response.data.profilePic);
         if (response.data.username) setUsername(response.data.username);
       }
     } catch (error) {
-      // Set fallback username if needed
       setUsername(`user_${userId ? userId.substring(0, 5) : 'unknown'}`);
     }
   };
@@ -89,7 +178,6 @@ const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation
   }, [isActive, screenFocused]);
 
   const navigateToProfile = useCallback(() => {
-    // Using the navigation prop passed from parent
     navigation.navigate('ProfileView', { 
       userId: userId,
       username: username 
@@ -115,10 +203,8 @@ const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation
       playerRef.current = player;
       player.loop = true;
       
-      // Set initial volume based on active state and screen focus and mute state
       player.volume = (isActive && screenFocused && !isMuted) ? 1.0 : 0.0;
       
-      // Always play the video, but control volume instead
       try {
         player.play();
       } catch (error) {
@@ -127,14 +213,11 @@ const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation
     }
   );
 
-  // Effect for handling active item changes
   useEffect(() => {
     if (playerRef.current) {
       try {
-        // Set volume based on both active state AND screen focus AND mute state
         playerRef.current.volume = (isActive && screenFocused && !isMuted) ? 1.0 : 0.0;
         
-        // Ensure the video is playing if it's active
         if (isActive && screenFocused) {
           playerRef.current.play();
         }
@@ -154,7 +237,6 @@ const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation
         controls={false} 
       />
        
-      {/* Gradient overlay at the bottom for better text readability */}
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.7)']}
         style={styles.gradientOverlay}
@@ -165,9 +247,7 @@ const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation
         <Text style={styles.description}>{item.description}</Text>
       </View>
       
-      {/* Right side icons container */}
       <View style={styles.rightIconsContainer}>
-        {/* Profile picture */}
         <TouchableOpacity
           onPress={navigateToProfile}
           activeOpacity={0.7}
@@ -187,7 +267,6 @@ const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation
           )}
         </TouchableOpacity>
         
-        {/* Sound icon */}
         <TouchableOpacity 
           style={styles.iconButton} 
           onPress={toggleMute}
@@ -201,7 +280,6 @@ const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation
           />
         </TouchableOpacity>
         
-        {/* Document file icon - only shown if docFileUrl exists */}
         {hasDocFile && (
           <TouchableOpacity 
             style={styles.docIconContainer} 
@@ -235,28 +313,29 @@ const ReelsScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [activeIndex, setActiveIndex] = useState(0);
   const [screenFocused, setScreenFocused] = useState(true);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [initialScrollIndex, setInitialScrollIndex] = useState(0);
   const navigation = useNavigation();
   
   const flatListRef = useRef(null);
   const queryClient = useQueryClient();
 
-  // Use React Query to fetch and cache data
   const { data: videos = [], isLoading } = useQuery(
     ['reels', selectedCategory],
     () => fetchReelsData(selectedCategory),
     {
-      // Use stale data while fetching new data
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      // Keep cached data for 10 minutes
+      staleTime: 5 * 60 * 1000,
       cacheTime: 10 * 60 * 1000,
-      // Enable prefetched data usage
       initialData: () => {
         return queryClient.getQueryData(['reels', selectedCategory]);
+      },
+      onError: (error) => {
+        console.error('Error fetching reels data:', error);
+        Alert.alert('Error', 'Unable to fetch reels. Please try again later.');
       }
     }
   );
 
-  // Handle screen focus changes
   useFocusEffect(
     useCallback(() => {
       setScreenFocused(true);
@@ -271,11 +350,21 @@ const ReelsScreen = () => {
     
     setSelectedCategory(category);
     setActiveIndex(0);
-    // Scroll back to top when changing category
+    setIsFullScreen(false);
     if (flatListRef.current) {
       flatListRef.current.scrollToOffset({ offset: 0, animated: true });
     }
   }, [selectedCategory]);
+
+  const handleThumbnailPress = useCallback((index) => {
+    setActiveIndex(index);
+    setInitialScrollIndex(index);
+    setIsFullScreen(true);
+  }, []);
+
+  const handleGoBackToThumbnails = useCallback(() => {
+    setIsFullScreen(false);
+  }, []);
 
   const viewabilityConfig = useMemo(() => ({ 
     itemVisiblePercentThreshold: 50 
@@ -317,6 +406,14 @@ const ReelsScreen = () => {
   const keyExtractor = useCallback((_, index) => `video-${index}`, []);
   const categoryKeyExtractor = useCallback((item) => `category-${item}`, []);
 
+  const renderThumbnailItem = useCallback(({ item, index }) => (
+    <ThumbnailItem 
+      item={item} 
+      onPress={handleThumbnailPress}
+      index={index}
+    />
+  ), [handleThumbnailPress]);
+
   const renderVideoItem = useCallback(({ item, index }) => (
     <VideoItem 
       item={item} 
@@ -327,8 +424,20 @@ const ReelsScreen = () => {
     />
   ), [activeIndex, screenFocused, navigation]);
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading Reels...</Text>
+      </View>
+    );
+  }
+
   return (
+    
     <View style={styles.container}>
+  <Text style={styles.exploreStoriesText}>
+  Explore Stories
+</Text>
       <View style={styles.filterContainer}>
         <FlatList
           horizontal
@@ -340,68 +449,157 @@ const ReelsScreen = () => {
         />
       </View>
 
-      <FlatList
-        ref={flatListRef}
-        data={videos}
-        keyExtractor={keyExtractor}
-        renderItem={renderVideoItem}
-        pagingEnabled
-        showsVerticalScrollIndicator={false}
-        getItemLayout={getItemLayout}
-        windowSize={5}
-        initialNumToRender={1}
-        maxToRenderPerBatch={2}
-        removeClippedSubviews={true}
-        onViewableItemsChanged={handleViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        snapToInterval={height}
-        decelerationRate="fast"
-        snapToAlignment="start"
-      />
+      {!isFullScreen ? (
+        <FlatList
+          ref={flatListRef}
+          data={videos}
+          keyExtractor={keyExtractor}
+          renderItem={renderThumbnailItem}
+          numColumns={2}
+          columnWrapperStyle={styles.thumbnailColumnWrapper}
+          contentContainerStyle={styles.thumbnailContentContainer}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No reels found</Text>
+            </View>
+          )}
+        />
+      ) : (
+        <View style={styles.fullScreenContainer}>
+          <TouchableOpacity 
+            style={styles.backToThumbnailsButton}
+            onPress={handleGoBackToThumbnails}
+          >
+            <FontAwesome name="arrow-left" size={24} color="white" />
+          </TouchableOpacity>
+          
+          <FlatList
+            ref={flatListRef}
+            data={videos}
+            keyExtractor={keyExtractor}
+            renderItem={renderVideoItem}
+            pagingEnabled
+            showsVerticalScrollIndicator={false}
+            initialNumToRender={1}
+            maxToRenderPerBatch={2}
+            windowSize={3}
+            removeClippedSubviews={true}
+            onViewableItemsChanged={handleViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
+            snapToInterval={height}
+            decelerationRate="fast"
+            snapToAlignment="start"
+            getItemLayout={getItemLayout}
+            initialScrollIndex={initialScrollIndex}
+          />
+        </View>
+      )}
     </View>
   );
 };
-
 const styles = StyleSheet.create({
+
+  
   container: { 
     flex: 1, 
-    backgroundColor: '#000' 
+    backgroundColor: '#000',
   },
   filterContainer: { 
     position: 'absolute', 
     top: 20, 
     zIndex: 10, 
-    width: '100%', 
-    paddingHorizontal: 10,
-    
+    width: '100%',
   },
   categoryListContent: {
-    paddingVertical: 9,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   categoryButton: { 
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    backgroundColor: 'rgba(40, 40, 40, 0.8)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    elevation: 2,
+    paddingVertical: 10,
+    marginRight: 15,
+    backgroundColor: 'transparent',
   },
   selectedCategoryButton: {
-    backgroundColor: 'white',
-    borderColor: 'white',
-    elevation: 4,
+    borderBottomWidth: 2,
+    borderBottomColor: 'white',
   },
   categoryText: { 
-    color: '#d3d3d3',
-    fontWeight: '500',
-    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '400',
+    fontSize: 16,
+    textAlign: 'center',
   },
   selectedCategoryText: {
-    color: '#000',
+    color: 'white',
     fontWeight: '600',
   },
+  thumbnailColumnWrapper: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+  },
+  thumbnailContentContainer: {
+    paddingTop: 80,
+    paddingBottom: 20,
+  },
+ thumbnailContainer: {
+  width: width / 2 - 15,
+  marginBottom: 15,
+  borderRadius: 12,
+  overflow: 'hidden', // Ensure image does not exceed the container
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 3,
+  elevation: 3,
+},
+  thumbnailImageContainer: {
+    height: 270,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    overflow: 'hidden',
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+    
+  },
+  
+  thumbnailProfileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  thumbnailProfilePic: {
+    width: 50,
+    height: 50,
+    borderRadius: 30,
+    marginRight: 20,
+    bottom:80,
+    left:50,
+  },
+  thumbnailDefaultProfileIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  thumbnailDefaultProfileText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  thumbnailUsername: {
+    color: 'white',
+    fontWeight: '900',
+    bottom:40,
+    fontSize:20,
+    left:-30,
+  },
+ 
   videoContainer: { 
     height: height,
     width: width,
@@ -427,7 +625,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 80,
     left: 10,
-    right: 70, // Make space for the right icons
+    right: 70,
     padding: 12,
   },
   userUsername: {
@@ -441,6 +639,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 5,
     lineHeight: 22,
+  },
+  rightIconsContainer: {
+    position: 'absolute',
+    right: 10,
+    bottom: 200,
+    alignItems: 'center',
   },
   profileButton: {
     marginBottom: 15,
@@ -467,12 +671,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
-  rightIconsContainer: {
-    position: 'absolute',
-    right: 10,
-    bottom: 200,
-    alignItems: 'center',
-  },
   iconButton: {
     width: 50,
     height: 50,
@@ -488,7 +686,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
   },
-  soundIcon: {
+  fullScreenContainer: {
+    flex: 1,
+  },
+  backToThumbnailsButton: {
+    position: 'absolute',
+    top: 40,
+    left: 15,
+    zIndex: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   docIconContainer: {
     width: 50,
@@ -524,6 +735,35 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  loadingText: {
+    color: 'white',
+    fontSize: 18,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 100,
+  },
+  emptyText: {
+    color: '#888',
+    fontSize: 16,
+  },
+  placeholderImage: {
+    backgroundColor: '#2c2c2c',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    color: '#888',
+    fontSize: 12,
   },
 });
 

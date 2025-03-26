@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 const UploadScreen = () => {
   const route = useRoute();
   const userId = route.params?.userId || '';
-  const [category, setCategory] = useState('Education');
+  const [category, setCategory] = useState('Entertainment');
   const [description, setDescription] = useState('');
   const [isPublic, setIsPublic] = useState(true);
   const [file, setFile] = useState(null);
@@ -16,7 +16,7 @@ const UploadScreen = () => {
   const [uploading, setUploading] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
-  const categories = ['Entertainment','Education', 'Technology', 'Travel', 'Food', 'Fitness', 'Music', 'Comedy', 'Motivation', 'Fashion', 'News'];
+  const categories = ['Entertainment','Kids Corner','Food/cooking','News','Gaming','Motivation/Self Growth','Travel/Nature','Tech/Education', 'Health/Fitness','Personal Thoughts'];
 
   const pickFile = async () => {
     let result = await DocumentPicker.getDocumentAsync({
@@ -80,14 +80,14 @@ const UploadScreen = () => {
     }
   
     try {
-      const response = await axios.post('http://192.168.159.183:4000/upload', formData, {
+      const response = await axios.post('http://192.168.234.183:4000/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
   
       Alert.alert('Success', response.data.message);
   
       // Reset form fields after successful upload
-      setCategory('Education');
+      setCategory('Entertainment');
       setDescription('');
       setIsPublic(true);
       setFile(null);

@@ -12,8 +12,6 @@ import {
   TouchableOpacity,
   Dimensions,
   Animated,
-  Image,
-  BlurView,
 } from "react-native";
 import { TextInput } from "react-native-paper";
 import axios from "axios";
@@ -23,22 +21,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get("window");
 
-// Glass Black Theme Colors
-const COLORS = {
-  primary: "#000000",     // Pure black
-  secondary: "#333333",   // Dark gray
-  tertiary: "#666666",    // Medium gray
-  background: "rgba(15, 15, 15, 0.9)",  // Almost black background with slight transparency
-  glass: "rgba(30, 30, 30, 0.65)",      // Glass effect color
-  glassBorder: "rgba(255, 255, 255, 0.15)", // Glass border glow
-  white: "#FFFFFF",
-  text: "#FFFFFF",        // White text
-  lightText: "#AAAAAA",   // Light gray text
-  accent: "#6B7DFF",      // Accent color (blue-purple)
-};
-
 // Custom Alert Component
-const CustomAlert = ({ visible, title, message, onDismiss, autoClose = false }) => {
+const CustomAlert = ({ visible, title, message, onDismiss }) => {
   const [animation] = useState(new Animated.Value(0));
   
   useEffect(() => {
@@ -49,17 +33,10 @@ const CustomAlert = ({ visible, title, message, onDismiss, autoClose = false }) 
         friction: 8,
         tension: 40,
       }).start();
-      
-      if (autoClose) {
-        const timer = setTimeout(() => {
-          onDismiss();
-        }, 1500);
-        return () => clearTimeout(timer);
-      }
     } else {
       animation.setValue(0);
     }
-  }, [visible, autoClose]);
+  }, [visible]);
   
   const translateY = animation.interpolate({
     inputRange: [0, 1],
@@ -77,14 +54,12 @@ const CustomAlert = ({ visible, title, message, onDismiss, autoClose = false }) 
         >
           <Text style={styles.alertTitle}>{title}</Text>
           <Text style={styles.alertMessage}>{message}</Text>
-          {!autoClose && (
-            <TouchableOpacity 
-              style={styles.alertButton} 
-              onPress={onDismiss}
-            >
-              <Text style={styles.alertButtonText}>OK</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity 
+            style={styles.alertButton} 
+            onPress={onDismiss}
+          >
+            <Text style={styles.alertButtonText}>OK</Text>
+          </TouchableOpacity>
         </Animated.View>
       </View>
     </Modal>
@@ -96,32 +71,19 @@ const AuthScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isSignup, setIsSignup] = useState(true);
+  const [isSignup, setIsSignup] = useState(false);
   const [loading, setLoading] = useState(true);
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   
   // Alert state
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
-  const [alertAutoClose, setAlertAutoClose] = useState(false);
-  const [redirectData, setRedirectData] = useState(null);
   
-  const showAlert = (title, message, autoClose = false, redirectInfo = null) => {
+  const showAlert = (title, message) => {
     setAlertTitle(title);
     setAlertMessage(message);
-    setAlertAutoClose(autoClose);
-    setRedirectData(redirectInfo);
     setAlertVisible(true);
-  };
-
-  const handleAlertDismiss = () => {
-    setAlertVisible(false);
-    if (redirectData) {
-      navigation.replace("Homes", redirectData);
-      setRedirectData(null);
-    }
   };
 
   useEffect(() => {
@@ -154,27 +116,21 @@ const AuthScreen = () => {
       showAlert("Error", "Please enter email and password.");
       return;
     }
-    
     try {
-      // Show loading indicator
-      setLoading(true);
-      
-      const response = await axios.post("http://192.168.159.183:4000/signin", {
+      const response = await axios.post("http://192.168.234.183:4000/signin", {
         identifier: email,
         password,
       });
-      
       const { userId, username, token } = response.data;
+
       await storeUserData({ userId, username, token });
-      
-      // Hide loading indicator
-      setLoading(false);
-      
-      // Show success message with auto-close and redirect
-      showAlert("Success", "Signing in...", true, { userId, username });
-      
+
+      showAlert("Success", response.data.message);
+      setTimeout(() => {
+        setAlertVisible(false);
+        navigation.replace("Homes", { userId, username });
+      }, 1500);
     } catch (error) {
-      setLoading(false);
       showAlert("Error", error.response?.data.message || "Something went wrong");
     }
   };
@@ -188,28 +144,22 @@ const AuthScreen = () => {
       showAlert("Error", "Passwords do not match.");
       return;
     }
-    
     try {
-      // Show loading indicator
-      setLoading(true);
-      
-      const response = await axios.post("http://192.168.159.183:4000/register", {
+      const response = await axios.post("http://192.168.234.183:4000/register", {
         username: email.split('@')[0], // Simple username from email
         email: email,
         password,
       });
-      
       const { userId, username: userName, token } = response.data;
+
       await storeUserData({ userId, username: userName, token });
-      
-      // Hide loading indicator
-      setLoading(false);
-      
-      // Show success message with auto-close and redirect
-      showAlert("Success", "Account created successfully!", true, { userId, username: userName });
-      
+
+      showAlert("Success", "Account created successfully!");
+      setTimeout(() => {
+        setAlertVisible(false);
+        navigation.replace("Homes", { userId, username: userName });
+      }, 1500);
     } catch (error) {
-      setLoading(false);
       showAlert("Error", error.response?.data.message || "Something went wrong");
     }
   };
@@ -217,119 +167,101 @@ const AuthScreen = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.accent} />
+        <ActivityIndicator size="large" color="#A0C15A" />
       </View>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="transparent" translucent barStyle="light-content" />
+      <StatusBar backgroundColor="#333333" barStyle="light-content" />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoidingView}
       >
-        {/* Logo at the top */}
         <View style={styles.logoContainer}>
-          <Image 
-            source={{ uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSPUtHFjkVCeqMlfZcelOQgJJrk1QSgjY9Lsw&s" }} 
-            style={styles.logo} 
-            resizeMode="contain"
-          />
+          <View style={styles.logoWrapper}>
+            <MaterialCommunityIcons name="triangle" size={30} color="#FFFFFF" style={styles.logoIcon} />
+          </View>
         </View>
         
         <View style={styles.formContainer}>
-          <Text style={styles.title}>{isSignup ? "Sign Up" : "Login"}</Text>
+          <View style={styles.tabContainer}>
+            <TouchableOpacity 
+              style={[styles.tab, !isSignup && styles.activeTab]}
+              onPress={() => setIsSignup(false)}
+            >
+              <Text style={[styles.tabText, !isSignup && styles.activeTabText]}>Login</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, isSignup && styles.activeTab]}
+              onPress={() => setIsSignup(true)}
+            >
+              <Text style={[styles.tabText, isSignup && styles.activeTabText]}>Signup</Text>
+            </TouchableOpacity>
+          </View>
           
           <View style={styles.inputsContainer}>
-            <View style={styles.inputWrapper}>
+            <View style={styles.inputContainer}>
+              <MaterialCommunityIcons name="email-outline" size={20} color="#888888" style={styles.inputIcon} />
               <TextInput
-                placeholder="username"
-                placeholderTextColor={COLORS.lightText}
+                placeholder="Email ID"
+                placeholderTextColor="#888888"
                 value={email}
                 onChangeText={setEmail}
                 style={styles.input}
-                theme={{ colors: { text: COLORS.text, primary: COLORS.accent } }}
+                theme={{ colors: { text: '#FFFFFF' } }}
                 underlineColor="transparent"
-                activeUnderlineColor={COLORS.accent}
-                left={<TextInput.Icon icon="email-outline" color={COLORS.lightText} />}
+                activeUnderlineColor="transparent"
               />
             </View>
             
-            <View style={styles.inputWrapper}>
+            <View style={styles.inputContainer}>
+              <MaterialCommunityIcons name="lock-outline" size={20} color="#888888" style={styles.inputIcon} />
               <TextInput
-                placeholder="password"
-                placeholderTextColor={COLORS.lightText}
+                placeholder="Password"
+                placeholderTextColor="#888888"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!passwordVisible}
                 style={styles.input}
-                theme={{ colors: { text: COLORS.text, primary: COLORS.accent } }}
+                theme={{ colors: { text: '#FFFFFF' } }}
                 underlineColor="transparent"
-                activeUnderlineColor={COLORS.accent}
-                left={<TextInput.Icon icon="lock-outline" color={COLORS.lightText} />}
-                right={<TextInput.Icon icon={passwordVisible ? "eye-off" : "eye"} color={COLORS.lightText} onPress={() => setPasswordVisible(!passwordVisible)} />}
+                activeUnderlineColor="transparent"
+                right={<TextInput.Icon icon={passwordVisible ? "eye-off" : "eye"} color="#888888" onPress={() => setPasswordVisible(!passwordVisible)} />}
               />
             </View>
             
             {isSignup && (
-              <View style={styles.inputWrapper}>
+              <View style={styles.inputContainer}>
+                <MaterialCommunityIcons name="lock-outline" size={20} color="#888888" style={styles.inputIcon} />
                 <TextInput
-                  placeholder="repeat password"
-                  placeholderTextColor={COLORS.lightText}
+                  placeholder="Confirm Password"
+                  placeholderTextColor="#888888"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!passwordVisible}
                   style={styles.input}
-                  theme={{ colors: { text: COLORS.text, primary: COLORS.accent } }}
+                  theme={{ colors: { text: '#FFFFFF' } }}
                   underlineColor="transparent"
-                  activeUnderlineColor={COLORS.accent}
-                  left={<TextInput.Icon icon="lock-outline" color={COLORS.lightText} />}
+                  activeUnderlineColor="transparent"
                 />
               </View>
             )}
             
-            {isSignup && (
-              <View style={styles.rememberContainer}>
-                <TouchableOpacity 
-                  style={styles.checkboxContainer} 
-                  onPress={() => setRememberMe(!rememberMe)}
-                >
-                  <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
-                    {rememberMe && <MaterialCommunityIcons name="check" size={14} color={COLORS.white} />}
-                  </View>
-                  <Text style={styles.rememberText}>Remember me</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            <TouchableOpacity style={styles.forgotContainer}>
+              <Text style={styles.forgotText}>Forgot Password ?</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.actionButton} 
               onPress={isSignup ? handleRegister : handleSignIn}
             >
               <Text style={styles.actionButtonText}>
-                {isSignup ? "Sign up" : "Login"}
+                {isSignup ? "Create Account" : "Login"}
               </Text>
             </TouchableOpacity>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.switchModeContainer}
-            onPress={() => {
-              setIsSignup(!isSignup);
-              setPassword("");
-              setConfirmPassword("");
-            }}
-          >
-            <Text style={styles.switchModeText}>
-              {isSignup ? "Already have an account? Login" : "Don't have an account? Sign up"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        
-        {/* Wellkin Name at the bottom */}
-        <View style={styles.brandContainer}>
-          <Text style={styles.brandText}>Wellkin</Text>
         </View>
       </KeyboardAvoidingView>
       
@@ -337,8 +269,7 @@ const AuthScreen = () => {
         visible={alertVisible}
         title={alertTitle}
         message={alertMessage}
-        onDismiss={handleAlertDismiss}
-        autoClose={alertAutoClose}
+        onDismiss={() => setAlertVisible(false)}
       />
     </SafeAreaView>
   );
@@ -347,200 +278,135 @@ const AuthScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: "#333333",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.primary,
+    backgroundColor: "#333333",
   },
   keyboardAvoidingView: {
     flex: 1,
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
     padding: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: COLORS.background,
   },
-  // Logo styles
   logoContainer: {
     alignItems: "center",
     marginBottom: 40,
   },
-  logo: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 2,
-    borderColor: COLORS.glassBorder,
-    backgroundColor: "rgba(0,0,0,0.3)",
+  logoWrapper: {
+    width: 50,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  logoIcon: {
+    transform: [{ rotate: '180deg' }],
   },
   formContainer: {
     width: "100%",
     maxWidth: 350,
-    backgroundColor: COLORS.glass,
-    borderRadius: 20,
-    padding: 25,
-    alignItems: "center",
-    shadowColor: COLORS.white,
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: COLORS.glassBorder,
-    backdropFilter: "blur(10px)",
   },
-  // Brand styles
-  brandContainer: {
-    marginTop: 20,
-    paddingBottom: 10,
-  },
-  brandText: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: COLORS.white,
-    textAlign: "center",
-    textShadowColor: 'rgba(255, 255, 255, 0.3)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "700",
-    color: COLORS.white,
+  tabContainer: {
+    flexDirection: "row",
     marginBottom: 30,
-    alignSelf: "flex-start",
-    textShadowColor: COLORS.accent,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    marginRight: 20,
+  },
+  activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: "#A0C15A",
+  },
+  tabText: {
+    color: "#888888",
+    fontSize: 16,
+  },
+  activeTabText: {
+    color: "#FFFFFF",
+    fontWeight: "500",
   },
   inputsContainer: {
     width: "100%",
   },
-  inputWrapper: {
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 20,
-    borderRadius: 12,
-    overflow: "hidden",
-    backgroundColor: "rgba(30, 30, 30, 0.5)",
-    borderWidth: 1,
-    borderColor: COLORS.glassBorder,
+    borderBottomWidth: 1,
+    borderBottomColor: "#555555",
+    paddingBottom: 5,
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
+    flex: 1,
     backgroundColor: "transparent",
+    color: "#FFFFFF",
     fontSize: 16,
-    height: 56,
-    color: COLORS.white,
-    borderRadius: 12,
+    height: 40,
   },
-  rememberContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 25,
-    marginTop: 5,
+  forgotContainer: {
+    alignSelf: "flex-end",
+    marginBottom: 30,
+    marginTop: 10,
   },
-  checkboxContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: COLORS.accent,
-    marginRight: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
-  },
-  checkboxActive: {
-    backgroundColor: COLORS.accent,
-  },
-  rememberText: {
-    color: COLORS.white,
+  forgotText: {
+    color: "#888888",
     fontSize: 14,
   },
   actionButton: {
-    backgroundColor: COLORS.accent,
-    paddingVertical: 15,
-    borderRadius: 12,
+    backgroundColor: "#A0C15A",
+    paddingVertical: 12,
+    borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
-    shadowColor: COLORS.accent,
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
-    borderWidth: 0,
   },
   actionButtonText: {
-    color: COLORS.white,
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
-    letterSpacing: 1,
-  },
-  switchModeContainer: {
-    marginTop: 30,
-  },
-  switchModeText: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: "500",
   },
   // Custom Alert Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
     justifyContent: "center",
     alignItems: "center",
-    backdropFilter: "blur(5px)",
   },
   alertContainer: {
     width: "80%",
-    backgroundColor: COLORS.glass,
-    borderRadius: 20,
-    padding: 25,
+    backgroundColor: "#444444",
+    borderRadius: 10,
+    padding: 20,
     alignItems: "center",
-    shadowColor: COLORS.white,
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: COLORS.glassBorder,
   },
   alertTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 12,
-    color: COLORS.white,
+    marginBottom: 10,
+    color: "#FFFFFF",
   },
   alertMessage: {
     fontSize: 16,
-    marginBottom: 25,
+    marginBottom: 20,
     textAlign: "center",
-    color: COLORS.lightText,
+    color: "#DDDDDD",
   },
   alertButton: {
-    backgroundColor: COLORS.accent,
-    paddingVertical: 12,
+    backgroundColor: "#A0C15A",
+    paddingVertical: 10,
     paddingHorizontal: 30,
-    borderRadius: 12,
-    shadowColor: COLORS.accent,
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
-    borderWidth: 0,
+    borderRadius: 5,
   },
   alertButtonText: {
-    color: COLORS.white,
+    color: "#FFFFFF",
     fontWeight: "600",
-    fontSize: 16,
   },
 });
 

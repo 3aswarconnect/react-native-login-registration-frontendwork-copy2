@@ -8,7 +8,7 @@ const { width, height } = Dimensions.get('window');
 
 // Define your fetch functions - extract them for reuse
 export const fetchReelsData = async (category = 'All') => {
-  const response = await axios.get(`http://192.168.159.183:4000/reels?category=${category}`);
+  const response = await axios.get(`http://192.168.234.183:4000/reels?category=${category}`);
   return response.data;
 };
 
@@ -25,11 +25,6 @@ const SplashScreen = ({ navigation }) => {
           queryClient.prefetchQuery(['reels', 'All'], () => fetchReelsData('All')),
           
           // Prefetch a few popular categories
-          queryClient.prefetchQuery(['reels', 'Entertainment'], () => 
-            fetchReelsData('Entertainment')),
-          
-          queryClient.prefetchQuery(['reels', 'Motivation/Self Growth'], () => 
-            fetchReelsData('Motivation/Self Growth')),
           
           // Add other prefetch queries as needed
         ]);

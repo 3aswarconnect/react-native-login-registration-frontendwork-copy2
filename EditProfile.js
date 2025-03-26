@@ -8,7 +8,7 @@ const EditProfile = ({ route, navigation }) => {
   const { userId, username, initialName, initialBio, initialProfilePic, initialSocialLinks, initialEmail } = route.params;
   const [name, setName] = useState(initialName || '');
   const [bio, setBio] = useState(initialBio || '');
-  const [email, setEmail] = useState(initialEmail || '');
+  const [email, setEmail] = useState(initialEmail || 'example@gmail.com');
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [socialLinks, setSocialLinks] = useState(initialSocialLinks || []);
@@ -42,7 +42,7 @@ const EditProfile = ({ route, navigation }) => {
     }
     
     try {
-      const response = await axios.post('http://192.168.159.183:4000/profile-send', formData, {
+      const response = await axios.post('http://192.168.234.183:4000/profile-send', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       Alert.alert('Success', response.data.message);
@@ -109,15 +109,7 @@ const EditProfile = ({ route, navigation }) => {
       <ScrollView style={styles.scrollView}>
         <View style={styles.container}>
           {/* Header with back button */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="arrow-back" size={24} color="#697565" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Edit Profile</Text>
-          </View>
+        
           
           <View style={styles.formContainer}>
             <Text style={styles.sectionTitle}>Profile Information</Text>
@@ -126,14 +118,14 @@ const EditProfile = ({ route, navigation }) => {
               value={name} 
               onChangeText={setName} 
               style={styles.input} 
-              placeholderTextColor="#697565" 
+              placeholderTextColor="#777777" 
             />
             <TextInput 
               placeholder="Enter Email" 
               value={email} 
               onChangeText={setEmail} 
               style={styles.input} 
-              placeholderTextColor="#697565"
+              placeholderTextColor="#777777"
               keyboardType="email-address"
               autoCapitalize="none"
             />
@@ -143,7 +135,7 @@ const EditProfile = ({ route, navigation }) => {
               onChangeText={setBio} 
               style={styles.bioInput}
               multiline
-              placeholderTextColor="#697565"
+              placeholderTextColor="#777777"
             />
             
             <Text style={styles.sectionTitle}>Change Profile Photo</Text>
@@ -159,21 +151,21 @@ const EditProfile = ({ route, navigation }) => {
                 value={newSocialLink.name} 
                 onChangeText={(text) => setNewSocialLink({...newSocialLink, name: text})} 
                 style={styles.input}
-                placeholderTextColor="#697565" 
+                placeholderTextColor="#777777" 
               />
               <TextInput 
                 placeholder="URL (e.g. https://youtube.com/c/mychannel)" 
                 value={newSocialLink.url} 
                 onChangeText={(text) => setNewSocialLink({...newSocialLink, url: text})} 
                 style={styles.input}
-                placeholderTextColor="#697565" 
+                placeholderTextColor="#777777" 
               />
               <TextInput 
                 placeholder="Platform (e.g. YouTube, Twitter, Instagram)" 
                 value={newSocialLink.platform} 
                 onChangeText={(text) => setNewSocialLink({...newSocialLink, platform: text})} 
                 style={styles.input}
-                placeholderTextColor="#697565" 
+                placeholderTextColor="#777777" 
               />
               <TouchableOpacity 
                 style={styles.addLinkButton} 
@@ -191,7 +183,7 @@ const EditProfile = ({ route, navigation }) => {
                 {socialLinks.map((link, index) => (
                   <View key={index} style={styles.currentLinkItem}>
                     <View style={styles.currentLinkInfo}>
-                      <Ionicons name={getIconName(link.platform)} size={20} color="#697565" />
+                      <Ionicons name={getIconName(link.platform)} size={20} color="#FFFFFF" />
                       <Text style={styles.currentLinkText} numberOfLines={1} ellipsizeMode="tail">
                         {link.name} - {link.url}
                       </Text>
@@ -200,7 +192,7 @@ const EditProfile = ({ route, navigation }) => {
                       style={styles.removeLinkButton} 
                       onPress={() => removeSocialLink(index)}
                     >
-                      <Ionicons name="trash-outline" size={20} color="#697565" />
+                      <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -210,6 +202,9 @@ const EditProfile = ({ route, navigation }) => {
             <TouchableOpacity style={styles.uploadButton} onPress={uploadToServer} disabled={uploading}>
               <Text style={styles.uploadButtonText}>{uploading ? 'Updating Profile...' : 'Update Profile'}</Text>
             </TouchableOpacity>
+            
+            <Text style={styles.versionText}>Version 1.0.0</Text>
+            <View style={styles.bottomDivider} />
           </View>
         </View>
       </ScrollView>
@@ -220,90 +215,85 @@ const EditProfile = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f5f0',
+    backgroundColor: '#0F1626', // Dark navy background to match SettingsScreen
   },
   scrollView: {
-    backgroundColor: '#f5f5f0',
+    backgroundColor: '#0F1626',
   },
   container: {
     flex: 1,
     paddingBottom: 30,
-    backgroundColor: '#f5f5f0',
+    backgroundColor: '#0F1626',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0d5',
-    backgroundColor: '#f5f5f0',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#0F1626',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#333333',
   },
   backButton: {
     padding: 5,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 15,
-    color: '#181C14',
+    marginLeft: 20,
+    color: '#FFFFFF',
   },
   formContainer: {
-    marginTop: 20,
+    marginTop: 10,
     width: '100%',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#3C3D37',
+    color: '#FFFFFF',
     marginTop: 15,
     marginBottom: 10,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e0e0d5',
+    borderColor: '#333333',
     borderRadius: 8,
     padding: 12,
     marginBottom: 15,
-    backgroundColor: '#fff',
+    backgroundColor: '#1E293B', // Darker input background
     width: '100%',
-    fontSize: 16,
-    color: '#181C14',
+    fontSize: 15,
+    color: '#FFFFFF',
   },
   bioInput: {
     borderWidth: 1,
-    borderColor: '#e0e0d5',
+    borderColor: '#333333',
     borderRadius: 8,
     padding: 12,
     marginBottom: 15,
-    backgroundColor: '#fff',
+    backgroundColor: '#1E293B',
     width: '100%',
-    fontSize: 16,
+    fontSize: 15,
     height: 100,
     textAlignVertical: 'top',
-    color: '#181C14',
+    color: '#FFFFFF',
   },
   fileButton: {
     padding: 14,
-    backgroundColor: '#697565',
-    borderRadius: 8,
+    backgroundColor: '#4A90E2', // Blue button color
+    borderRadius: 10,
     alignItems: 'center',
     marginBottom: 15,
-    shadowColor: '#181C14',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
   },
   fileButtonText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 15,
   },
   fileText: {
     fontSize: 14,
-    color: '#3C3D37',
+    color: '#FFFFFF',
     marginBottom: 15,
     textAlign: 'center',
   },
@@ -313,43 +303,38 @@ const styles = StyleSheet.create({
   },
   addLinkButton: {
     padding: 14,
-    backgroundColor: '#3C3D37',
-    borderRadius: 8,
+    backgroundColor: '#4A90E2',
+    borderRadius: 10,
     alignItems: 'center',
     marginBottom: 15,
-    shadowColor: '#181C14',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
   },
   addLinkButtonText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 15,
   },
   currentLinksContainer: {
     width: '100%',
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#e0e0d5',
+    borderColor: '#333333',
     borderRadius: 8,
     padding: 10,
-    backgroundColor: '#fff',
+    backgroundColor: '#1E293B',
   },
   currentLinksTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#3C3D37',
+    color: '#FFFFFF',
   },
   currentLinkItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0d5',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#333333',
   },
   currentLinkInfo: {
     flexDirection: 'row',
@@ -359,7 +344,7 @@ const styles = StyleSheet.create({
   currentLinkText: {
     marginLeft: 8,
     fontSize: 14,
-    color: '#181C14',
+    color: '#FFFFFF',
     flex: 1,
   },
   removeLinkButton: {
@@ -367,20 +352,30 @@ const styles = StyleSheet.create({
   },
   uploadButton: {
     padding: 14,
-    backgroundColor: '#697565',
-    borderRadius: 8,
+    backgroundColor: '#4A90E2',
+    borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#181C14',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    marginBottom: 30,
   },
   uploadButtonText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 15,
+  },
+  versionText: {
+    textAlign: 'center',
+    color: '#777777',
+    fontSize: 14,
+    marginBottom: 10,
+  },
+  bottomDivider: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#333333',
+    borderRadius: 2.5,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
 });
 

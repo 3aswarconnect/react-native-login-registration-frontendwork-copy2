@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Switch } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Switch, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -50,88 +50,89 @@ const SettingsScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#555" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-      </View>
       
-      <ScrollView>
+      
+      <ScrollView style={styles.scrollView}>
         <View style={styles.container}>
-          {/* Section: Account */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Account</Text>
+         
+          
+          {/* Main Settings List */}
+          <View style={styles.settingsList}>
+           
+            
+            
+            
+           
             
             <TouchableOpacity 
-              style={styles.settingItem} 
+              style={styles.settingItem}
               onPress={navigateToEditProfile}
             >
-              <View style={styles.settingTextContainer}>
-                <Ionicons name="person-circle-outline" size={24} color="#555" />
+              <View style={styles.settingLeftContent}>
+                <Ionicons name="person-outline" size={22} color="#ffffff" />
                 <Text style={styles.settingText}>Edit Profile</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#aaa" />
+              <Ionicons name="chevron-forward" size={18} color="#555" />
             </TouchableOpacity>
-          </View>
-          
-          {/* Section: App Settings */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>App Settings</Text>
             
-            <View style={styles.settingItem}>
-              <View style={styles.settingTextContainer}>
-                <Ionicons name="cellular-outline" size={24} color="#555" />
-                <Text style={styles.settingText}>Use Less Data</Text>
+            
+            
+            <TouchableOpacity style={styles.settingItem}>
+              <View style={styles.settingLeftContent}>
+                <Ionicons name="information-circle-outline" size={22} color="#ffffff" />
+                <Text style={styles.settingText}>Copyright Information</Text>
               </View>
-              <Switch
-                trackColor={{ false: "#ddd", true: "#4a90e2" }}
-                thumbColor="#fff"
-                ios_backgroundColor="#ddd"
-                onValueChange={toggleUseLessData}
-                value={useLessData}
-              />
-            </View>
-          </View>
-          
-          {/* Section: Legal */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Legal</Text>
+              <Ionicons name="chevron-forward" size={18} color="#555" />
+            </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.settingItem} 
+              style={styles.settingItem}
               onPress={navigateToTermsAndConditions}
             >
-              <View style={styles.settingTextContainer}>
-                <Ionicons name="document-text-outline" size={24} color="#555" />
-                <Text style={styles.settingText}>Terms and Conditions</Text>
+              <View style={styles.settingLeftContent}>
+                <Ionicons name="document-text-outline" size={22} color="#ffffff" />
+                <Text style={styles.settingText}>Privacy Policy</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#aaa" />
+              <Ionicons name="chevron-forward" size={18} color="#555" />
             </TouchableOpacity>
             
+            
+            
+            
             <TouchableOpacity 
-              style={styles.settingItem} 
+              style={styles.settingItem}
               onPress={navigateToAbout}
             >
-              <View style={styles.settingTextContainer}>
-                <Ionicons name="information-circle-outline" size={24} color="#555" />
+              <View style={styles.settingLeftContent}>
+                <Ionicons name="alert-circle-outline" size={22} color="#ffffff" />
                 <Text style={styles.settingText}>About</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#aaa" />
+              <Ionicons name="chevron-forward" size={18} color="#555" />
             </TouchableOpacity>
           </View>
           
           {/* Log Out Button */}
-         {/* Log Out Button */}
-<TouchableOpacity style={styles.logoutButton} onPress={logoutFunction}>
-  <Text style={styles.logoutButtonText}>Log Out</Text>
-</TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.logoutButton} 
+            onPress={logoutFunction}
+          >
+            <Text style={styles.logoutButtonText}>Log Out</Text>
+          </TouchableOpacity>
           
-          {/* App Version */}
+          {/* Keep UseLessData functionality but hidden */}
+          <View style={{ display: 'none' }}>
+            <Switch
+              trackColor={{ false: "#ddd", true: "#4a90e2" }}
+              thumbColor="#fff"
+              ios_backgroundColor="#ddd"
+              onValueChange={toggleUseLessData}
+              value={useLessData}
+            />
+          </View>
+          
+          {/* Version indicator at bottom */}
           <Text style={styles.versionText}>Version 1.0.0</Text>
+          <View style={styles.bottomDivider} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -141,75 +142,84 @@ const SettingsScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#0F1626', // Dark navy background
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#0F1626',
   },
   backButton: {
     padding: 5,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 15,
+    color: '#FFFFFF',
+    marginLeft: 20,
+  },
+  scrollView: {
+    flex: 1,
   },
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f8f8f8',
+    paddingTop: 10,
   },
-  section: {
-    marginBottom: 25,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+  premiumButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 16,
+  premiumText: {
+    color: '#FFFFFF',
+    marginLeft: 14,
+    fontSize: 14,
+  },
+  premiumBold: {
     fontWeight: 'bold',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    color: '#333',
-    backgroundColor: '#f5f5f5',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  },
+  settingsList: {
+    paddingHorizontal: 16,
   },
   settingItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingVertical: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#333333',
   },
-  settingTextContainer: {
+  settingLeftContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingRightContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   settingText: {
-    fontSize: 16,
-    color: '#333',
-    marginLeft: 12,
+    color: '#FFFFFF',
+    fontSize: 15,
+    marginLeft: 16,
+  },
+  settingDetailText: {
+    color: '#777777',
+    fontSize: 14,
+    marginRight: 8,
   },
   logoutButton: {
-    backgroundColor: '#ff3b30',
+    backgroundColor: '#FF3B30',
     borderRadius: 10,
-    padding: 15,
+    padding: 14,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 30,
     marginBottom: 20,
+    marginHorizontal: 16,
   },
   logoutButtonText: {
     color: 'white',
@@ -218,8 +228,16 @@ const styles = StyleSheet.create({
   },
   versionText: {
     textAlign: 'center',
-    color: '#888',
+    color: '#777777',
     fontSize: 14,
+    marginBottom: 10,
+  },
+  bottomDivider: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#333333',
+    borderRadius: 2.5,
+    alignSelf: 'center',
     marginBottom: 20,
   },
 });

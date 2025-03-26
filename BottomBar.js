@@ -78,9 +78,12 @@ const BottomBar = () => {
         ),
       }}
     >
+
+
       <Tab.Screen 
         name="Reels"   
         component={ReelsScreen} 
+        initialParams={{ userId}} 
         options={{ 
           tabBarIcon: ({ focused }) => (
             <View style={styles.tabIconContainer}>

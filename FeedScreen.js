@@ -10,7 +10,7 @@ const numColumns = 2;
 const itemWidth = (width - 40) / numColumns;
 
 // Define API base URL - verify this is correct for your environment
-const API_URL = 'http://192.168.159.183:4000';
+const API_URL = 'http://192.168.234.183:4000';
 
 // VideoItem component for thumbnails in the grid
 const VideoItem = ({ videoUri, style }) => {
@@ -504,6 +504,7 @@ const FeedScreen = () => {
           {/* Category Filter */}
           <View style={styles.categoryContainer}>
             <FlatList
+              key="categoryList"
               data={categories}
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -560,6 +561,7 @@ const FeedScreen = () => {
             </View>
           ) : (
             <FlatList
+              key="gridView"
               data={media}
               renderItem={renderGridItem}
               keyExtractor={(item) => item.fileId || item._id || String(Math.random())}
@@ -580,6 +582,7 @@ const FeedScreen = () => {
           
           {/* Reels FlatList */}
           <FlatList
+            key="reelsView"
             ref={reelsRef}
             data={media}
             renderItem={renderReelsItem}
