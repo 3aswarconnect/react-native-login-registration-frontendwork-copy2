@@ -42,7 +42,7 @@ const EditProfile = ({ route, navigation }) => {
     }
     
     try {
-      const response = await axios.post('http://192.168.234.183:4000/profile-send', formData, {
+      const response = await axios.post('http://192.168.132.183:4000/profile-send', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       Alert.alert('Success', response.data.message);

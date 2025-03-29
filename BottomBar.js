@@ -11,7 +11,7 @@ import ReelsScreen from './ReelsScreen';
 import MemesScreen from './MemesScreen';
 import UploadScreen from './UploadScreen';
 import ProfileScreen from './ProfileScreen';
-
+import SearchScreen from './SearchScreen';
 const Tab = createBottomTabNavigator();
 
 // Custom tab button component with animation
@@ -114,6 +114,24 @@ const BottomBar = () => {
           ),
           tabBarButton: (props) => (
             <TabButton {...props} accessibilityLabel="Memes tab" />
+          ),
+        }}
+      />
+      <Tab.Screen 
+        name="search" 
+        component={SearchScreen} 
+        options={{ 
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.tabIconContainer}>
+              <Ionicons 
+                name="search-outline" 
+                color={focused ? "#000000" : "#909090"} 
+                size={35}
+              />
+            </View>
+          ),
+          tabBarButton: (props) => (
+            <TabButton {...props} accessibilityLabel="Search tab" />
           ),
         }}
       />

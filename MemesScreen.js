@@ -1,7 +1,22 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, Dimensions, Linking, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  FlatList, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Image, 
+  Dimensions, 
+  Linking, 
+  Alert,
+  Modal,
+  Animated,
+  PanResponder,
+  TouchableWithoutFeedback 
+} from 'react-native';
+import { PinchGestureHandler, State } from 'react-native-gesture-handler';
 import { useFocusEffect } from '@react-navigation/native';
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
 import axios from 'axios';
 
 const { height, width } = Dimensions.get('window');
@@ -14,7 +29,7 @@ const formatTimestamp = (timestampString) => {
   
   const monthName = months[date.getMonth()];
   const dayName = days[date.getDay()];
-  const dayOfMonth = date.getDate(); // Added this line to get the day of the month
+  const dayOfMonth = date.getDate();
   const year = date.getFullYear();
   const hours = date.getHours();
   const minutes = date.getMinutes();
@@ -28,6 +43,14 @@ const formatTimestamp = (timestampString) => {
 const MemeItem = React.memo(({ item, index }) => {
   const [username, setUsername] = useState('');
   const [profilePic, setProfilePic] = useState(null);
+  const [isImageModalVisible, setIsImageModalVisible] = useState(false);
+  
+  // Animated values for scaling, translation, and pinch zoom
+  const scaleValue = useRef(new Animated.Value(1)).current;
+  const translateXValue = useRef(new Animated.Value(0)).current;
+  const translateYValue = useRef(new Animated.Value(0)).current;
+  const pinchScale = useRef(new Animated.Value(1)).current;
+  const lastScale = useRef(1);
   
   const userId = item.userId;
   const hasDocFile = !!item.docFileUrl;
@@ -40,7 +63,7 @@ const MemeItem = React.memo(({ item, index }) => {
   
   const fetchProfileData = async () => {
     try {
-      const response = await axios.get(`http://192.168.234.183:4000/profileget`, {
+      const response = await axios.get(`http://192.168.132.183:4000/profileget`, {
         params: { userId: userId }
       });
       
@@ -68,38 +91,177 @@ const MemeItem = React.memo(({ item, index }) => {
     }
   }, [item.docFileUrl]);
 
+  // Pinch gesture handler
+  const onPinchGestureEvent = Animated.event(
+    [{ nativeEvent: { scale: pinchScale } }],
+    { useNativeDriver: true }
+  );
+
+  const onPinchHandlerStateChange = (event) => {
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      // When pinch gesture ends, update last scale and reset pinch scale
+      lastScale.current *= event.nativeEvent.scale;
+      pinchScale.setValue(1);
+      
+      // Limit zoom
+      const newScale = Math.max(1, Math.min(lastScale.current, 3));
+      lastScale.current = newScale;
+      
+      Animated.spring(scaleValue, {
+        toValue: newScale,
+        friction: 3,
+        tension: 40,
+        useNativeDriver: true
+      }).start();
+    }
+  };
+
+  // Image press and animation handlers
+  const handlePressIn = () => {
+    Animated.spring(scaleValue, {
+      toValue: 1.05,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleValue, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true
+    }).start();
+  };
+
+  const openImageModal = () => {
+    setIsImageModalVisible(true);
+  };
+
+  // Reset zoom when modal closes
+  const closeImageModal = () => {
+    setIsImageModalVisible(false);
+    lastScale.current = 1;
+    Animated.spring(scaleValue, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true
+    }).start();
+    
+    // Reset translations
+    Animated.spring(translateXValue, { toValue: 0, useNativeDriver: true }).start();
+    Animated.spring(translateYValue, { toValue: 0, useNativeDriver: true }).start();
+  };
+
+  // Pan responder for modal image interaction
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: () => lastScale.current > 1,
+      onPanResponderMove: Animated.event(
+        [
+          null,
+          { 
+            dx: translateXValue,
+            dy: translateYValue 
+          }
+        ],
+        { useNativeDriver: true }
+      ),
+      onPanResponderRelease: () => {
+        Animated.spring(translateXValue, {
+          toValue: 0,
+          friction: 5,
+          useNativeDriver: true
+        }).start();
+        Animated.spring(translateYValue, {
+          toValue: 0,
+          friction: 5,
+          useNativeDriver: true
+        }).start();
+      }
+    })
+  ).current;
+
   return (
     <View style={styles.cardContainer}>
-      <View style={styles.cardHeader}>
-        <View style={styles.headerLeft}>
-          {profilePic ? (
-            <Image 
-              source={{ uri: profilePic }} 
-              style={styles.profilePic} 
-            />
-          ) : (
-            <View style={styles.defaultProfilePic}>
-              <Text style={styles.defaultProfileText}>
-                {username ? username.charAt(0).toUpperCase() : '?'}
-              </Text>
-            </View>
-          )}
-          <View style={styles.userInfo}>
-            <Text style={styles.username}>@{username}</Text>
-           
-          </View>
-        </View>
-       
-      </View>
+      {/* Main Image with Press Animation */}
+      <TouchableOpacity 
+        activeOpacity={0.8}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        onPress={openImageModal}
+      >
+        <Animated.Image 
+          source={{ uri: item.fileUrl }} 
+          style={[
+            styles.mainImage, 
+            { 
+              transform: [
+                { scale: scaleValue }
+              ] 
+            }
+          ]} 
+          resizeMode="cover" 
+        />
+      </TouchableOpacity>
 
-      <Image 
-        source={{ uri: item.fileUrl }} 
-        style={styles.mainImage} 
-        resizeMode="cover" 
-      />
+      {/* Full Screen Modal for Image with Pinch Zoom */}
+      <Modal
+        visible={isImageModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeImageModal}
+      >
+        <TouchableWithoutFeedback onPress={closeImageModal}>
+          <View style={styles.modalContainer}>
+            <PinchGestureHandler
+              onGestureEvent={onPinchGestureEvent}
+              onHandlerStateChange={onPinchHandlerStateChange}
+            >
+              <Animated.Image
+                {...panResponder.panHandlers}
+                source={{ uri: item.fileUrl }}
+                style={[
+                  styles.fullScreenImage,
+                  { 
+                    transform: [
+                      { scale: Animated.multiply(scaleValue, pinchScale) },
+                      { translateX: translateXValue },
+                      { translateY: translateYValue }
+                    ] 
+                  }
+                ]}
+                resizeMode="contain"
+              />
+            </PinchGestureHandler>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       <View style={styles.cardFooter}>
         <View style={styles.footerLeft}>
+          <View style={styles.cardHeader}>
+            <View style={styles.headerLeft}>
+              {profilePic ? (
+                <Image 
+                  source={{ uri: profilePic }} 
+                  style={styles.profilePic} 
+                />
+              ) : (
+                <View style={styles.defaultProfilePic}>
+                  <Text style={styles.defaultProfileText}>
+                    {username ? username.charAt(0).toUpperCase() : '?'}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.userInfo}>
+                <Text style={styles.username}>@{username}</Text>
+              </View>
+            </View>
+          </View>
+
           <Text style={styles.description}>{item.description}</Text>
           <Text style={styles.dateText}>
             {item.timestamp ? formatTimestamp(item.timestamp) : ''}
@@ -114,27 +276,10 @@ const MemeItem = React.memo(({ item, index }) => {
           </TouchableOpacity>
         )}
       </View>
-
-      <View style={styles.attendeeSection}>
-        <View style={styles.attendeeIcons}>
-          <Image 
-            source={{ uri: 'https://example.com/placeholder1.jpg' }} 
-            style={styles.attendeeIcon} 
-          />
-          <Image 
-            source={{ uri: 'https://example.com/placeholder2.jpg' }} 
-            style={[styles.attendeeIcon, styles.attendeeIconOverlap]} 
-          />
-          <Image 
-            source={{ uri: 'https://example.com/placeholder3.jpg' }} 
-            style={[styles.attendeeIcon, styles.attendeeIconOverlap]} 
-          />
-        </View>
-        
-      </View>
     </View>
   );
 });
+
 const MemesScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [memes, setMemes] = useState([]);
@@ -146,8 +291,8 @@ const MemesScreen = () => {
 
   const fetchMemes = async (category) => {
     try {
-      const response = await axios.get(`http://192.168.234.183:4000/memes?category=${category}`);
-      console.log('Memes fetched:', response.data);
+      const response = await axios.get(`http://192.168.132.183:4000/memes?category=${category}`);
+      
       setMemes(response.data);
     } catch (error) {
       console.error('Error fetching memes:', error);
@@ -214,7 +359,7 @@ const MemesScreen = () => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: 'black' 
+    backgroundColor: '#1D1D1D' 
   },
   filterContainer: { 
     paddingTop: 50, 
@@ -227,7 +372,6 @@ const styles = StyleSheet.create({
   categoryButton: { 
     paddingHorizontal: 16,
     paddingVertical: 10,
-    marginRight: 15,
     backgroundColor: 'transparent',
   },
   selectedCategoryButton: {
@@ -236,21 +380,21 @@ const styles = StyleSheet.create({
   },
   categoryText: { 
     color: '#666',
-    fontWeight: '400',
+    fontWeight: '500',
     fontSize: 16,
   },
   selectedCategoryText: {
-    color: 'black',
+    color: 'white',
     fontWeight: '600',
   },
   listContent: {
     paddingTop: 10,
   },
   cardContainer: {
-    backgroundColor: 'white',
-    marginBottom: 15,
-    borderRadius: 15,
-    marginHorizontal: 15,
+    backgroundColor: 'black',
+    marginBottom: 25,
+    borderRadius: 4,
+    marginHorizontal: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -261,7 +405,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 15,
+    padding: 5,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -292,13 +436,7 @@ const styles = StyleSheet.create({
   username: {
     fontWeight: 'bold',
     fontSize: 16,
-  },
-  eventType: {
-    color: '#666',
-    fontSize: 14,
-  },
-  moreIcon: {
-    padding: 5,
+    color:'white',
   },
   mainImage: {
     width: '100%',
@@ -318,6 +456,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 5,
+    color:'white',
   },
   dateText: {
     color: '#666',
@@ -331,35 +470,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  attendeeSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingBottom: 15,
   },
-  attendeeIcons: {
-    flexDirection: 'row',
-  },
-  attendeeIcon: {
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  attendeeIconOverlap: {
-    marginLeft: -15,
-  },
-  interestedButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-  },
-  interestedButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+  fullScreenImage: {
+    width: width,
+    height: height,
+    maxWidth: '100%',
+    maxHeight: '100%',
   },
 });
 

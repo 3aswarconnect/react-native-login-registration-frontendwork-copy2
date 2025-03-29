@@ -10,7 +10,7 @@ const numColumns = 2;
 const itemWidth = (width - 40) / numColumns;
 
 // Define API base URL - verify this is correct for your environment
-const API_URL = 'http://192.168.234.183:4000';
+const API_URL = 'http://192.168.132.183:4000';
 
 // VideoItem component for thumbnails in the grid
 const VideoItem = ({ videoUri, style }) => {

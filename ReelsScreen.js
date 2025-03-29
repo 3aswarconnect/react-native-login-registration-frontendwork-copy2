@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Dimensions, Image, Linking, Alert, Animated,ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Dimensions, Image, Linking, Alert, Animated, ActivityIndicator, Modal } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
@@ -14,7 +14,7 @@ const categories = ['All','Entertainment','Kids Corner','Food/cooking','News','G
 // Export this function to be available for prefetching in SplashScreen
 export const fetchReelsData = async (category = 'All') => {
   try {
-    const response = await axios.get(`http://192.168.234.183:4000/reels?category=${category}`);
+    const response = await axios.get(`http://192.168.132.183:4000/reels?category=${category}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching reels:', error);
@@ -44,7 +44,7 @@ const ThumbnailItem = React.memo(({ item, onPress, index }) => {
 
   const fetchProfileData = async (userId) => {
     try {
-      const response = await axios.get(`http://192.168.234.183:4000/profileget`, {
+      const response = await axios.get(`http://192.168.132.183:4000/profileget`, {
         params: { userId },
       });
 
@@ -80,7 +80,7 @@ const ThumbnailItem = React.memo(({ item, onPress, index }) => {
     >
       <View style={styles.thumbnailImageContainer}>
         {loadingThumbnail ? (
-          <ActivityIndicator size="large" color="blue" />
+          <ActivityIndicator size="large" color="white" />
         ) : thumbnailUri && !imageLoadError ? (
           <Image
             source={{ uri: thumbnailUri }}
@@ -154,7 +154,7 @@ const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation
   
   const fetchProfileData = async () => {
     try {
-      const response = await axios.get(`http://192.168.234.183:4000/profileget`, {
+      const response = await axios.get(`http://192.168.132.183:4000/profileget`, {
         params: { userId }
       });
       
@@ -315,8 +315,15 @@ const ReelsScreen = () => {
   const [screenFocused, setScreenFocused] = useState(true);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [initialScrollIndex, setInitialScrollIndex] = useState(0);
-  const navigation = useNavigation();
+  // Focus lock state variables
+  const [focusLocked, setFocusLocked] = useState(false);
+  const [lockedCategory, setLockedCategory] = useState('');
+  const [lockTimeRemaining, setLockTimeRemaining] = useState(0);
+  const [focusModalVisible, setFocusModalVisible] = useState(false);
+  const [modalCategory, setModalCategory] = useState('');
   
+  const timerRef = useRef(null);
+  const navigation = useNavigation();
   const flatListRef = useRef(null);
   const queryClient = useQueryClient();
 
@@ -345,7 +352,87 @@ const ReelsScreen = () => {
     }, [])
   );
 
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  const startFocusLock = useCallback((category, minutes) => {
+    setFocusLocked(true);
+    setLockedCategory(category);
+    setSelectedCategory(category);
+    setLockTimeRemaining(minutes * 60); // Convert to seconds
+    
+    // Display category lock notice
+    Alert.alert(
+      "Focus Mode Activated",
+      `You're now focused on ${category} for ${minutes} minutes. Other categories are locked.`,
+      [{ text: "OK" }]
+    );
+    
+    // Start the timer
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    
+    timerRef.current = setInterval(() => {
+      setLockTimeRemaining(prev => {
+        if (prev <= 1) {
+          // Timer complete
+          clearInterval(timerRef.current);
+          setFocusLocked(false);
+          
+          // Alert user
+          Alert.alert(
+            "Focus Time Complete",
+            `Your ${minutes} minute focus time on ${category} is complete!`,
+            [{ text: "Great!" }]
+          );
+          
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    // Close the modal
+    setFocusModalVisible(false);
+  }, []);
+
+  const cancelFocusLock = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    setFocusLocked(false);
+    setLockTimeRemaining(0);
+    
+    // Alert the user
+    Alert.alert(
+      "Focus Mode Canceled",
+      "You've canceled focus mode. All categories are now available.",
+      [{ text: "OK" }]
+    );
+  }, []);
+  
   const handleCategorySelect = useCallback((category) => {
+    // Don't allow changing category if focus lock is active
+    if (focusLocked && category !== lockedCategory) {
+      const minutes = Math.ceil(lockTimeRemaining / 60);
+      Alert.alert(
+        "Focus Mode Active",
+        `You're focused on ${lockedCategory} for ${minutes} more minutes. Cancel focus mode to change categories.`,
+        [
+          { text: "Stay Focused", style: "cancel" },
+          { text: "Cancel Focus Mode", onPress: cancelFocusLock }
+        ]
+      );
+      return;
+    }
+    
     if (category === selectedCategory) return;
     
     setSelectedCategory(category);
@@ -354,7 +441,12 @@ const ReelsScreen = () => {
     if (flatListRef.current) {
       flatListRef.current.scrollToOffset({ offset: 0, animated: true });
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, focusLocked, lockedCategory, lockTimeRemaining, cancelFocusLock]);
+
+  const handleLockPress = useCallback((category) => {
+    setModalCategory(category);
+    setFocusModalVisible(true);
+  }, []);
 
   const handleThumbnailPress = useCallback((index) => {
     setActiveIndex(index);
@@ -383,25 +475,55 @@ const ReelsScreen = () => {
     index
   }), []);
 
-  const renderCategoryButton = useCallback(({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.categoryButton, 
-        selectedCategory === item ? styles.selectedCategoryButton : {}
-      ]}
-      onPress={() => handleCategorySelect(item)}
-      activeOpacity={0.7}
-    >
-      <Text 
-        style={[
-          styles.categoryText,
-          selectedCategory === item ? styles.selectedCategoryText : {}
-        ]}
-      >
-        {item}
-      </Text>
-    </TouchableOpacity>
-  ), [selectedCategory, handleCategorySelect]);
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const renderCategoryButton = useCallback(({ item }) => {
+    const isLocked = focusLocked && item !== lockedCategory;
+    
+    return (
+      <View style={styles.categoryButtonContainer}>
+        <TouchableOpacity
+          style={[
+            styles.categoryButton, 
+            selectedCategory === item ? styles.selectedCategoryButton : {},
+            isLocked ? styles.lockedCategoryButton : {}
+          ]}
+          onPress={() => handleCategorySelect(item)}
+          activeOpacity={0.7}
+          disabled={isLocked}
+        >
+          <Text 
+            style={[
+              styles.categoryText,
+              selectedCategory === item ? styles.selectedCategoryText : {},
+              isLocked ? styles.lockedCategoryText : {}
+            ]}
+          >
+            {item}
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[
+            styles.lockButton,
+            focusLocked && item === lockedCategory ? styles.activeLockedButton : {}
+          ]}
+          onPress={() => handleLockPress(item)}
+          disabled={focusLocked && item !== lockedCategory}
+        >
+          <FontAwesome 
+            name={focusLocked && item === lockedCategory ? "lock" : "unlock"} 
+            size={16} 
+            color={focusLocked && item === lockedCategory ? "#FFD700" : "white"} 
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  }, [selectedCategory, handleCategorySelect, focusLocked, lockedCategory, handleLockPress]);
 
   const keyExtractor = useCallback((_, index) => `video-${index}`, []);
   const categoryKeyExtractor = useCallback((item) => `category-${item}`, []);
@@ -433,12 +555,22 @@ const ReelsScreen = () => {
   }
 
   return (
-    
     <View style={styles.container}>
-  <Text style={styles.exploreStoriesText}>
-  Explore Stories
-</Text>
-      <View style={styles.filterContainer}>
+      {/* <Text style={styles.exploreStoriesText}>
+        Explore Stories
+      </Text>
+       */}
+      {/* Focus Timer Banner (visible only when focus lock is active) */}
+      {focusLocked && (
+        <View style={styles.focusTimerBanner}>
+          <Text style={styles.focusTimerText}>
+            Focus Mode: {formatTime(lockTimeRemaining)}
+          </Text>
+          
+        </View>
+      )}
+      
+      <View style={[styles.filterContainer, focusLocked && styles.filterContainerWithBanner]}>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -457,7 +589,10 @@ const ReelsScreen = () => {
           renderItem={renderThumbnailItem}
           numColumns={2}
           columnWrapperStyle={styles.thumbnailColumnWrapper}
-          contentContainerStyle={styles.thumbnailContentContainer}
+          contentContainerStyle={[
+            styles.thumbnailContentContainer,
+            focusLocked && styles.thumbnailContentContainerWithBanner
+          ]}
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No reels found</Text>
@@ -466,12 +601,7 @@ const ReelsScreen = () => {
         />
       ) : (
         <View style={styles.fullScreenContainer}>
-          <TouchableOpacity 
-            style={styles.backToThumbnailsButton}
-            onPress={handleGoBackToThumbnails}
-          >
-            <FontAwesome name="arrow-left" size={24} color="white" />
-          </TouchableOpacity>
+         
           
           <FlatList
             ref={flatListRef}
@@ -494,36 +624,89 @@ const ReelsScreen = () => {
           />
         </View>
       )}
+      
+      {/* Focus Time Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={focusModalVisible}
+        onRequestClose={() => setFocusModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View 
+            style={styles.modalContent}
+          >
+            <Text style={styles.modalTitle}>Lock on {modalCategory}</Text>
+            <Text style={styles.modalSubtitle}>Select a focus time to lock in</Text>
+            
+            <View style={styles.timeButtonsContainer}>
+              <TouchableOpacity 
+                style={styles.timeButton}
+                onPress={() => startFocusLock(modalCategory, 10)}
+              >
+                <Text style={styles.timeButtonText}>10 mins</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.timeButton}
+                onPress={() => startFocusLock(modalCategory, 15)}
+              >
+                <Text style={styles.timeButtonText}>15 mins</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.timeButton}
+                onPress={() => startFocusLock(modalCategory, 30)}
+              >
+                <Text style={styles.timeButtonText}>30 mins</Text>
+              </TouchableOpacity>
+            </View>
+            
+        
+          </Animated.View>
+        </View>
+      </Modal>
+      
     </View>
   );
 };
-const styles = StyleSheet.create({
 
-  
+const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: '#000',
   },
+ 
   filterContainer: { 
     position: 'absolute', 
     top: 20, 
     zIndex: 10, 
     width: '100%',
   },
+  filterContainerWithBanner: {
+    top: 60, // Additional space for the focus timer banner
+  },
   categoryListContent: {
     paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },
+  categoryButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 10,
+  },
   categoryButton: { 
     paddingHorizontal: 16,
     paddingVertical: 10,
-    marginRight: 15,
     backgroundColor: 'transparent',
   },
-  selectedCategoryButton: {
-    borderBottomWidth: 2,
-    borderBottomColor: 'white',
+  // selectedCategoryButton: {
+  //   borderBottomWidth: 2,
+  //   borderBottomColor: 'white',
+  // },
+  lockedCategoryButton: {
+    opacity: 0.5,
   },
   categoryText: { 
     color: 'rgba(255,255,255,0.7)',
@@ -535,6 +718,52 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600',
   },
+  lockedCategoryText: {
+    color: 'rgba(255,255,255,0.4)',
+  },
+  lockButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  activeLockedButton: {
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderColor: '#FFD700',
+  },
+  focusTimerBanner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 40,
+    backgroundColor: '#3498db',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    zIndex: 50,
+  },
+  focusTimerText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  cancelFocusButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 5,
+  },
+  cancelFocusText: {
+    color: 'white',
+    fontWeight: '600',
+  },
   thumbnailColumnWrapper: {
     justifyContent: 'space-between',
     paddingHorizontal: 10,
@@ -543,17 +772,21 @@ const styles = StyleSheet.create({
     paddingTop: 80,
     paddingBottom: 20,
   },
- thumbnailContainer: {
-  width: width / 2 - 15,
-  marginBottom: 15,
-  borderRadius: 12,
-  overflow: 'hidden', // Ensure image does not exceed the container
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.2,
-  shadowRadius: 3,
-  elevation: 3,
-},
+  thumbnailContentContainerWithBanner: {
+    paddingTop: 120, // Additional padding for the focus timer banner
+  },
+  thumbnailContainer: {
+    width: width / 2 - 15,
+    marginBottom: 15,
+    borderRadius: 12,
+    overflow: 'hidden', // Ensure image does not exceed the container
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+    height:220,
+  },
   thumbnailImageContainer: {
     height: 270,
     borderTopLeftRadius: 12,
@@ -563,9 +796,7 @@ const styles = StyleSheet.create({
   thumbnailImage: {
     width: '100%',
     height: '100%',
-    
   },
-  
   thumbnailProfileContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -576,7 +807,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 30,
     marginRight: 20,
-    bottom:80,
+    bottom:150,
     left:50,
   },
   thumbnailDefaultProfileIcon: {
@@ -594,12 +825,11 @@ const styles = StyleSheet.create({
   },
   thumbnailUsername: {
     color: 'white',
-    fontWeight: '900',
-    bottom:40,
-    fontSize:20,
+    fontWeight: '500',
+    bottom:100,
+    fontSize:15,
     left:-30,
   },
- 
   videoContainer: { 
     height: height,
     width: width,
@@ -765,6 +995,62 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 12,
   },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  timeButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginVertical: 10,
+  },
+  timeButton: {
+    backgroundColor: 'rgba(52, 152, 219, 0.8)',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    width: '30%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  timeButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+
 });
 
 export default ReelsScreen;
