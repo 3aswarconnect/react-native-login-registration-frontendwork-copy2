@@ -28,7 +28,7 @@ const SearchScreen = ({ navigation }) => {
             setError(null);
 
             try {
-                const response = await fetch(`http://192.168.132.183:4000/search-users?username=${encodeURIComponent(query)}`, {
+                const response = await fetch(`http://192.168.217.183:4000/search-users?username=${encodeURIComponent(query)}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'

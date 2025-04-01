@@ -117,7 +117,7 @@ const AuthScreen = () => {
       return;
     }
     try {
-      const response = await axios.post("http://192.168.132.183:4000/signin", {
+      const response = await axios.post("http://192.168.217.183:4000/signin", {
         identifier: email,
         password,
       });
@@ -145,7 +145,7 @@ const AuthScreen = () => {
       return;
     }
     try {
-      const response = await axios.post("http://192.168.132.183:4000/register", {
+      const response = await axios.post("http://192.168.217.183:4000/register", {
         username: email.split('@')[0], // Simple username from email
         email: email,
         password,

@@ -80,7 +80,7 @@ const ProfileView = () => {
     setIsLoading(true);
     try {
       console.log(`Fetching profile for userId: ${userId}`);
-      const response = await axios.get(`http://192.168.132.183:4000/profileget`, {
+      const response = await axios.get(`http://192.168.217.183:4000/profileget`, {
         params: { userId: userId }
       });
       
@@ -125,7 +125,7 @@ const ProfileView = () => {
         category: selectedCategory !== 'All' ? selectedCategory : undefined
       });
       
-      const response = await axios.get(`http://192.168.132.183:4000/getUserMedia`, {
+      const response = await axios.get(`http://192.168.217.183:4000/getUserMedia`, {
         params: {
           userId: userId,
           category: selectedCategory !== 'All' ? selectedCategory : undefined

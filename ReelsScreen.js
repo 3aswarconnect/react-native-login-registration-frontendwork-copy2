@@ -7,6 +7,8 @@ import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useQueryClient } from 'react-query';
 import * as VideoThumbnails from "expo-video-thumbnails";
+import { debounce } from 'lodash';
+
 const { height, width } = Dimensions.get('window');
 
 const categories = ['All','Entertainment','Kids Corner','Food/cooking','News','Gaming','Motivation/Self Growth','Travel/Nature','Tech/Education', 'Health/Fitness','Personal Thoughts'];
@@ -14,7 +16,7 @@ const categories = ['All','Entertainment','Kids Corner','Food/cooking','News','G
 // Export this function to be available for prefetching in SplashScreen
 export const fetchReelsData = async (category = 'All') => {
   try {
-    const response = await axios.get(`http://192.168.132.183:4000/reels?category=${category}`);
+    const response = await axios.get(`http://192.168.217.183:4000/reels?category=${category}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching reels:', error);
@@ -33,18 +35,16 @@ const ThumbnailItem = React.memo(({ item, onPress, index }) => {
     if (item.userId) fetchProfileData(item.userId);
 
     if (item.thumbnailUrl) {
-      // Use pre-generated thumbnail if available
       setThumbnailUri(item.thumbnailUrl);
       setLoadingThumbnail(false);
     } else {
-      // Generate thumbnail from video
       generateThumbnail(item.fileUrl);
     }
   }, [item]);
 
   const fetchProfileData = async (userId) => {
     try {
-      const response = await axios.get(`http://192.168.132.183:4000/profileget`, {
+      const response = await axios.get(`http://192.168.217.183:4000/profileget`, {
         params: { userId },
       });
 
@@ -53,7 +53,7 @@ const ThumbnailItem = React.memo(({ item, onPress, index }) => {
         setUsername(response.data.username || `user_${userId?.substring(0, 5)}`);
       }
     } catch (error) {
-      console.error("Profile fetch error:", error);
+     
       setUsername(`user_${userId?.substring(0, 5) || "unknown"}`);
     }
   };
@@ -61,7 +61,7 @@ const ThumbnailItem = React.memo(({ item, onPress, index }) => {
   const generateThumbnail = async (videoUri) => {
     try {
       const { uri } = await VideoThumbnails.getThumbnailAsync(videoUri, {
-        time: 0, // First frame of the video
+        time: 0,
       });
       setThumbnailUri(uri);
     } catch (error) {
@@ -107,23 +107,30 @@ const ThumbnailItem = React.memo(({ item, onPress, index }) => {
           )}
           <Text style={styles.thumbnailUsername}>@{username || "anonymous"}</Text>
         </View>
-
-      
       </View>
     </TouchableOpacity>
   );
 });
+
 const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation }) => {
   const playerRef = useRef(null);
   const [username, setUsername] = useState('');
   const [profilePic, setProfilePic] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
-  
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  
   const userId = item.userId;
-  
   const hasDocFile = !!item.docFileUrl;
+
+  // Format view count for display
+  const formatViewCount = (count) => {
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
+    }
+    if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}K`;
+    }
+    return count.toString();
+  };
   
   useEffect(() => {
     if (userId) {
@@ -154,7 +161,7 @@ const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation
   
   const fetchProfileData = async () => {
     try {
-      const response = await axios.get(`http://192.168.132.183:4000/profileget`, {
+      const response = await axios.get(`http://192.168.217.183:4000/profileget`, {
         params: { userId }
       });
       
@@ -248,24 +255,34 @@ const VideoItem = React.memo(({ item, isActive, index, screenFocused, navigation
       </View>
       
       <View style={styles.rightIconsContainer}>
-        <TouchableOpacity
-          onPress={navigateToProfile}
-          activeOpacity={0.7}
-          style={styles.profileButton}
-        >
-          {profilePic ? (
-            <Image 
-              source={{ uri: profilePic }} 
-              style={styles.profilePicIcon} 
-            />
-          ) : (
-            <View style={styles.defaultProfileIcon}>
-              <Text style={styles.defaultProfileIconText}>
-                {username ? username.charAt(0).toUpperCase() : '?'}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={styles.profileContainer}>
+          <TouchableOpacity
+            onPress={navigateToProfile}
+            activeOpacity={0.7}
+            style={styles.profileButton}
+          >
+            {profilePic ? (
+              <Image 
+                source={{ uri: profilePic }} 
+                style={styles.profilePicIcon} 
+              />
+            ) : (
+              <View style={styles.defaultProfileIcon}>
+                <Text style={styles.defaultProfileIconText}>
+                  {username ? username.charAt(0).toUpperCase() : '?'}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          
+          {/* View count display */}
+          <View style={styles.viewCountContainer}>
+            <FontAwesome name="eye" size={14} color="white" />
+            <Text style={styles.viewCountText}>
+              {item.views ? formatViewCount(item.views) : '0'}
+            </Text>
+          </View>
+        </View>
         
         <TouchableOpacity 
           style={styles.iconButton} 
@@ -315,17 +332,19 @@ const ReelsScreen = () => {
   const [screenFocused, setScreenFocused] = useState(true);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [initialScrollIndex, setInitialScrollIndex] = useState(0);
-  // Focus lock state variables
   const [focusLocked, setFocusLocked] = useState(false);
   const [lockedCategory, setLockedCategory] = useState('');
   const [lockTimeRemaining, setLockTimeRemaining] = useState(0);
   const [focusModalVisible, setFocusModalVisible] = useState(false);
   const [modalCategory, setModalCategory] = useState('');
+  const [viewedVideoIds, setViewedVideoIds] = useState([]);
   
   const timerRef = useRef(null);
   const navigation = useNavigation();
   const flatListRef = useRef(null);
   const queryClient = useQueryClient();
+  const viewedVideoIdsRef = useRef([]);
+  const sendViewsTimeoutRef = useRef(null);
 
   const { data: videos = [], isLoading } = useQuery(
     ['reels', selectedCategory],
@@ -343,20 +362,44 @@ const ReelsScreen = () => {
     }
   );
 
+  const sendViewedVideosToBackend = useCallback(debounce(async (ids) => {
+    try {
+      if (ids.length === 0) return;
+      
+      const response = await axios.post('http://192.168.217.183:4000/increment-views', {
+        videoIds: ids
+      });
+      
+      console.log('Views updated:', response.data);
+      setViewedVideoIds([]);
+      viewedVideoIdsRef.current = [];
+    } catch (error) {
+      console.error('Error updating views:', error);
+    }
+  }, 5000), []);
+
   useFocusEffect(
     useCallback(() => {
       setScreenFocused(true);
       return () => {
         setScreenFocused(false);
+        if (viewedVideoIdsRef.current.length > 0) {
+          sendViewedVideosToBackend(viewedVideoIdsRef.current);
+        }
       };
     }, [])
   );
 
-  // Clean up timer on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+      }
+      if (sendViewsTimeoutRef.current) {
+        clearTimeout(sendViewsTimeoutRef.current);
+      }
+      if (viewedVideoIdsRef.current.length > 0) {
+        sendViewedVideosToBackend(viewedVideoIdsRef.current);
       }
     };
   }, []);
@@ -365,16 +408,14 @@ const ReelsScreen = () => {
     setFocusLocked(true);
     setLockedCategory(category);
     setSelectedCategory(category);
-    setLockTimeRemaining(minutes * 60); // Convert to seconds
+    setLockTimeRemaining(minutes * 60);
     
-    // Display category lock notice
     Alert.alert(
       "Focus Mode Activated",
       `You're now focused on ${category} for ${minutes} minutes. Other categories are locked.`,
       [{ text: "OK" }]
     );
     
-    // Start the timer
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
@@ -382,11 +423,9 @@ const ReelsScreen = () => {
     timerRef.current = setInterval(() => {
       setLockTimeRemaining(prev => {
         if (prev <= 1) {
-          // Timer complete
           clearInterval(timerRef.current);
           setFocusLocked(false);
           
-          // Alert user
           Alert.alert(
             "Focus Time Complete",
             `Your ${minutes} minute focus time on ${category} is complete!`,
@@ -399,7 +438,6 @@ const ReelsScreen = () => {
       });
     }, 1000);
     
-    // Close the modal
     setFocusModalVisible(false);
   }, []);
 
@@ -410,7 +448,6 @@ const ReelsScreen = () => {
     setFocusLocked(false);
     setLockTimeRemaining(0);
     
-    // Alert the user
     Alert.alert(
       "Focus Mode Canceled",
       "You've canceled focus mode. All categories are now available.",
@@ -419,7 +456,6 @@ const ReelsScreen = () => {
   }, []);
   
   const handleCategorySelect = useCallback((category) => {
-    // Don't allow changing category if focus lock is active
     if (focusLocked && category !== lockedCategory) {
       const minutes = Math.ceil(lockTimeRemaining / 60);
       Alert.alert(
@@ -466,8 +502,29 @@ const ReelsScreen = () => {
     if (viewableItems.length > 0) {
       const newIndex = viewableItems[0].index;
       setActiveIndex(newIndex);
+      
+      const currentVideo = videos[newIndex];
+      if (currentVideo && currentVideo.fileId) {
+        if (!viewedVideoIdsRef.current.includes(currentVideo.fileId)) {
+          const newViewedIds = [...viewedVideoIdsRef.current, currentVideo.fileId];
+          viewedVideoIdsRef.current = newViewedIds;
+          setViewedVideoIds(newViewedIds);
+          
+          if (sendViewsTimeoutRef.current) {
+            clearTimeout(sendViewsTimeoutRef.current);
+          }
+          
+          if (newViewedIds.length >= 10) {
+            sendViewedVideosToBackend(newViewedIds);
+          } else {
+            sendViewsTimeoutRef.current = setTimeout(() => {
+              sendViewedVideosToBackend(newViewedIds);
+            }, 30000);
+          }
+        }
+      }
     }
-  }, []);
+  }, [videos]);
 
   const getItemLayout = useCallback((_, index) => ({
     length: height,
@@ -556,17 +613,11 @@ const ReelsScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* <Text style={styles.exploreStoriesText}>
-        Explore Stories
-      </Text>
-       */}
-      {/* Focus Timer Banner (visible only when focus lock is active) */}
       {focusLocked && (
         <View style={styles.focusTimerBanner}>
           <Text style={styles.focusTimerText}>
             Focus Mode: {formatTime(lockTimeRemaining)}
           </Text>
-          
         </View>
       )}
       
@@ -601,8 +652,6 @@ const ReelsScreen = () => {
         />
       ) : (
         <View style={styles.fullScreenContainer}>
-         
-          
           <FlatList
             ref={flatListRef}
             data={videos}
@@ -625,7 +674,6 @@ const ReelsScreen = () => {
         </View>
       )}
       
-      {/* Focus Time Modal */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -633,9 +681,7 @@ const ReelsScreen = () => {
         onRequestClose={() => setFocusModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <Animated.View 
-            style={styles.modalContent}
-          >
+          <Animated.View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Lock on {modalCategory}</Text>
             <Text style={styles.modalSubtitle}>Select a focus time to lock in</Text>
             
@@ -661,12 +707,9 @@ const ReelsScreen = () => {
                 <Text style={styles.timeButtonText}>30 mins</Text>
               </TouchableOpacity>
             </View>
-            
-        
           </Animated.View>
         </View>
       </Modal>
-      
     </View>
   );
 };
@@ -684,7 +727,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   filterContainerWithBanner: {
-    top: 60, // Additional space for the focus timer banner
+    top: 60,
   },
   categoryListContent: {
     paddingHorizontal: 10,
@@ -701,10 +744,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: 'transparent',
   },
-  // selectedCategoryButton: {
-  //   borderBottomWidth: 2,
-  //   borderBottomColor: 'white',
-  // },
   lockedCategoryButton: {
     opacity: 0.5,
   },
@@ -754,16 +793,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  cancelFocusButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 5,
-  },
-  cancelFocusText: {
-    color: 'white',
-    fontWeight: '600',
-  },
   thumbnailColumnWrapper: {
     justifyContent: 'space-between',
     paddingHorizontal: 10,
@@ -773,19 +802,19 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   thumbnailContentContainerWithBanner: {
-    paddingTop: 120, // Additional padding for the focus timer banner
+    paddingTop: 120,
   },
   thumbnailContainer: {
     width: width / 2 - 15,
     marginBottom: 15,
     borderRadius: 12,
-    overflow: 'hidden', // Ensure image does not exceed the container
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 3,
-    height:220,
+    height: 220,
   },
   thumbnailImageContainer: {
     height: 270,
@@ -807,8 +836,8 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 30,
     marginRight: 20,
-    bottom:150,
-    left:50,
+    bottom: 150,
+    left: 50,
   },
   thumbnailDefaultProfileIcon: {
     width: 40,
@@ -826,9 +855,9 @@ const styles = StyleSheet.create({
   thumbnailUsername: {
     color: 'white',
     fontWeight: '500',
-    bottom:100,
-    fontSize:15,
-    left:-30,
+    bottom: 100,
+    fontSize: 15,
+    left: -30,
   },
   videoContainer: { 
     height: height,
@@ -876,8 +905,12 @@ const styles = StyleSheet.create({
     bottom: 200,
     alignItems: 'center',
   },
-  profileButton: {
+  profileContainer: {
+    alignItems: 'center',
     marginBottom: 15,
+  },
+  profileButton: {
+    marginBottom: 8,
   },
   profilePicIcon: {
     width: 50,
@@ -901,6 +934,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
+  viewCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  viewCountText: {
+    color: 'white',
+    fontSize: 12,
+    marginLeft: 4,
+    fontWeight: '600',
+  },
   iconButton: {
     width: 50,
     height: 50,
@@ -918,18 +965,6 @@ const styles = StyleSheet.create({
   },
   fullScreenContainer: {
     flex: 1,
-  },
-  backToThumbnailsButton: {
-    position: 'absolute',
-    top: 40,
-    left: 15,
-    zIndex: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   docIconContainer: {
     width: 50,
@@ -961,11 +996,6 @@ const styles = StyleSheet.create({
     borderRadius: 27,
     backgroundColor: 'rgba(221, 228, 235, 0.3)',
   },
-  docIcon: {
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -995,7 +1025,6 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 12,
   },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -1050,7 +1079,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
-
 });
 
 export default ReelsScreen;

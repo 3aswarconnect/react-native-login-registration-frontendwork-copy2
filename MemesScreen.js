@@ -63,7 +63,7 @@ const MemeItem = React.memo(({ item, index }) => {
   
   const fetchProfileData = async () => {
     try {
-      const response = await axios.get(`http://192.168.132.183:4000/profileget`, {
+      const response = await axios.get(`http://192.168.217.183:4000/profileget`, {
         params: { userId: userId }
       });
       
@@ -291,7 +291,7 @@ const MemesScreen = () => {
 
   const fetchMemes = async (category) => {
     try {
-      const response = await axios.get(`http://192.168.132.183:4000/memes?category=${category}`);
+      const response = await axios.get(`http://192.168.217.183:4000/memes?category=${category}`);
       
       setMemes(response.data);
     } catch (error) {

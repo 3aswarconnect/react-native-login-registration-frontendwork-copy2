@@ -32,7 +32,7 @@ const ProfileScreen = () => {
   const fetchProfileData = async () => {
     setIsLoading(true);
     try {
-      const response = await axios.get(`http://192.168.132.183:4000/profileget`, {
+      const response = await axios.get(`http://192.168.217.183:4000/profileget`, {
         params: { userId: userId }
       });
       
